@@ -51,9 +51,9 @@ type
     
     // State
     FExecuted: Boolean;
-    FOuterEnumerator: TEnumerator<TOuter>;
-    FInnerLookup: TDictionary<TKey, TList<TInner>>;
-    FCurrentInnerList: TList<TInner>;
+    FOuterEnumerator: System.Generics.Collections.TEnumerator<TOuter>;
+    FInnerLookup: TDictionary<TKey, System.Generics.Collections.TList<TInner>>;
+    FCurrentInnerList: System.Generics.Collections.TList<TInner>;
     FCurrentInnerIndex: Integer;
     
     procedure BuildLookup;
@@ -113,7 +113,7 @@ end;
 
 destructor TJoinIterator<TOuter, TInner, TKey, TResult>.Destroy;
 var
-  List: TList<TInner>;
+  List: System.Generics.Collections.TList<TInner>;
 begin
   if FInnerLookup <> nil then
   begin
@@ -129,15 +129,15 @@ procedure TJoinIterator<TOuter, TInner, TKey, TResult>.BuildLookup;
 var
   Item: TInner;
   Key: TKey;
-  List: TList<TInner>;
+  List: System.Generics.Collections.TList<TInner>;
 begin
-  FInnerLookup := TDictionary<TKey, TList<TInner>>.Create;
+  FInnerLookup := TDictionary<TKey, System.Generics.Collections.TList<TInner>>.Create;
   for Item in FInner do
   begin
     Key := FInnerKeySelector(Item);
     if not FInnerLookup.TryGetValue(Key, List) then
     begin
-      List := TList<TInner>.Create;
+      List := System.Generics.Collections.TList<TInner>.Create;
       FInnerLookup.Add(Key, List);
     end;
     List.Add(Item);

@@ -629,7 +629,7 @@ function TSonarQubeReporter.GenerateXml: string;
 var
   SB: TStringBuilder;
   TC: TTestCaseReport;
-  ResultStr, CurrentFile, TestFile: string;
+  ResultStr, TestFile: string;
   FileTests: TList<TTestCaseReport>;
   FileGroups: TDictionary<string, TList<TTestCaseReport>>;
   FilePath: string;

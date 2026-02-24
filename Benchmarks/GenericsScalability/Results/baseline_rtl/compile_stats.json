@@ -1,0 +1,25 @@
+{
+    "Label": "baseline_rtl",
+    "Timestamp": "2026-02-23 18:07:00",
+    "CompileTimeSeconds": 515.2,
+    "CompileTimeFormatted": "08:35.2",
+    "LinesCompiled": 16842,
+    "Platform": "Win32",
+    "Config": "Release",
+    "BuildSuccess": true,
+    "BinarySizeBytes": 34635264,
+    "BinarySizeMB": 33.03,
+    "Compiler": "Delphi 13 (dcc32)",
+    "BuiltFrom": "IDE (Delphi 13)",
+    "Specializations": {
+        "IList_T": 500,
+        "TDictionary_K_V": 1500,
+        "Total": 2000
+    },
+    "RuntimeMs": {
+        "ListCreation": 14,
+        "DictionaryCreation": 14,
+        "Total": 28
+    },
+    "Notes": "Using IList<T>/TSmartList<T> from Dext.Collections (wraps System.Generics.Collections.TList<T>) + raw TDictionary<K,V> from System.Generics.Collections. Screenshot saved as dext-collections-before-refactory-ide-build.png"
+}

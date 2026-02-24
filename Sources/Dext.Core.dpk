@@ -49,6 +49,11 @@ contains
   Dext.Json.Driver.SystemJson in 'Core\Json\Dext.Json.Driver.SystemJson.pas',
   DextJsonDataObjects in 'Core\Json\DextJsonDataObjects.pas',
   Dext.Collections.Extensions in 'Core\Dext.Collections.Extensions.pas',
+  Dext.Collections.Memory in 'Core\Dext.Collections.Memory.pas',
+  Dext.Collections.Raw in 'Core\Dext.Collections.Raw.pas',
+  Dext.Collections.Factory in 'Core\Dext.Collections.Factory.pas',
+  Dext.Collections.RawDict in 'Core\Dext.Collections.RawDict.pas',
+  Dext.Collections.Dict in 'Core\Dext.Collections.Dict.pas',
   Dext.Collections in 'Core\Dext.Collections.pas',
   Dext.Configuration.Binder in 'Core\Dext.Configuration.Binder.pas',
   Dext.Configuration.Core in 'Core\Dext.Configuration.Core.pas',
@@ -103,7 +108,8 @@ contains
   Dext.Interception.Proxy in 'Core\Interception\Dext.Interception.Proxy.pas',
   Dext.Interception.ClassProxy in 'Core\Interception\Dext.Interception.ClassProxy.pas',
   Dext.Logging in 'Core\Dext.Logging.pas',
-  Dext.Telemetry.Context in 'Core\Dext.Telemetry.Context.pas';
+  Dext.Telemetry.Context in 'Core\Dext.Telemetry.Context.pas',
+  Dext.Collections.Base in 'Core\Dext.Collections.Base.pas';
 
 end.
 

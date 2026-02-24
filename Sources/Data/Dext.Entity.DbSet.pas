@@ -69,7 +69,7 @@ type
     FContextPtr: Pointer;
     FRttiContext: TRttiContext; 
     FTableName: string;
-    FPKColumns: TList<string>; 
+    FPKColumns: System.Generics.Collections.TList<string>; 
     FProps: TDictionary<string, TRttiProperty>; 
     FFields: TDictionary<string, TRttiField>; // Added for field mapping support
     FColumns: TDictionary<string, string>;      
@@ -362,7 +362,7 @@ begin
   FProps := TDictionary<string, TRttiProperty>.Create;
   FFields := TDictionary<string, TRttiField>.Create; // Added for field mapping
   FColumns := TDictionary<string, string>.Create;
-  FPKColumns := TList<string>.Create;
+  FPKColumns := System.Generics.Collections.TList<string>.Create;
   FRttiContext := TRttiContext.Create;
   FIdentityMap := TObjectDictionary<string, T>.Create([doOwnsValues]);
   FOrphans := TObjectList<T>.Create(True); // Owns objects - will free on destroy
@@ -1099,7 +1099,7 @@ var
   Cmd: IDbCommand;
   EntitiesT: TArray<T>;
   i: Integer;
-  Props: TList<TPair<TRttiProperty, string>>;
+  Props: System.Generics.Collections.TList<TPair<TRttiProperty, string>>;
   ParamValues: TArray<TValue>;
   Prop: TRttiProperty;
   ParamName: string;
@@ -1555,13 +1555,13 @@ begin
   Result := ToList(ISpecification<T>(nil));
 end;
 
-function TDbSet<T>.ToListAsync: TAsyncBuilder<IList<T>>;
+function TDbSet<T>.ToListAsync: Dext.Threading.Async.TAsyncBuilder<Dext.Collections.IList<T>>;
 begin
   if not FContext.Connection.Pooled then
     raise Exception.Create('ToListAsync requires a pooled connection to ensure thread safety.');
 
-  Result := TAsyncTask.Run<IList<T>>(
-    function: IList<T>
+  Result := Dext.Threading.Async.TAsyncTask.Run<Dext.Collections.IList<T>>(
+    function: Dext.Collections.IList<T>
     begin
       Result := ToList;
     end
@@ -2336,7 +2336,7 @@ begin
   if L.Count > 0 then
   begin
     Result := L[0];
-    (L as TSmartList<T>).Extract(Result);
+    L.Extract(Result);
   end
   else
     Result := nil;

@@ -35,6 +35,7 @@ uses
   System.SysUtils,
   System.Generics.Collections,
   Dext.Collections,
+  Dext.Collections.Base,
   Dext.Entity.Query;
 
 type
@@ -44,21 +45,21 @@ type
   IGrouping<TKey, T> = interface
     ['{9A8B7C6D-5E4F-3A2B-1C0D-9E8F7A6B5C4D}']
     function GetKey: TKey;
-    function GetEnumerator: TEnumerator<T>;
+    function GetEnumerator: System.Generics.Collections.TEnumerator<T>;
     property Key: TKey read GetKey;
   end;
 
   TGrouping<TKey, T> = class(TInterfacedObject, IGrouping<TKey, T>)
   private
     type
-      TIListEnumeratorWrapper = class(TEnumerator<T>)
+      TIListEnumeratorWrapper = class(System.Generics.Collections.TEnumerator<T>)
       private
-        FEnumerator: IEnumerator<T>;
+        FEnumerator: Dext.Collections.Base.IEnumerator<T>;
       protected
         function DoGetCurrent: T; override;
         function DoMoveNext: Boolean; override;
       public
-        constructor Create(const AEnumerator: IEnumerator<T>);
+        constructor Create(const AEnumerator: Dext.Collections.Base.IEnumerator<T>);
       end;
   private
     FKey: TKey;
@@ -68,7 +69,7 @@ type
     destructor Destroy; override;
     procedure Add(const AItem: T);
     function GetKey: TKey;
-    function GetEnumerator: TEnumerator<T>;
+    function GetEnumerator: System.Generics.Collections.TEnumerator<T>;
     property Key: TKey read GetKey;
   end;
 
@@ -79,7 +80,7 @@ type
   private
     FSource: TFluentQuery<T>;
     FKeySelector: TFunc<T, TKey>;
-    FGroups: TList<IGrouping<TKey, T>>;
+    FGroups: System.Generics.Collections.TList<IGrouping<TKey, T>>;
     FIndex: Integer;
     FExecuted: Boolean;
   protected
@@ -128,14 +129,14 @@ begin
   Result := FKey;
 end;
 
-function TGrouping<TKey, T>.GetEnumerator: TEnumerator<T>;
+function TGrouping<TKey, T>.GetEnumerator: System.Generics.Collections.TEnumerator<T>;
 begin
   Result := TIListEnumeratorWrapper.Create(FItems.GetEnumerator);
 end;
 
 { TGrouping<TKey, T>.TIListEnumeratorWrapper }
 
-constructor TGrouping<TKey, T>.TIListEnumeratorWrapper.Create(const AEnumerator: IEnumerator<T>);
+constructor TGrouping<TKey, T>.TIListEnumeratorWrapper.Create(const AEnumerator: Dext.Collections.Base.IEnumerator<T>);
 begin
   inherited Create;
   FEnumerator := AEnumerator;
@@ -175,11 +176,11 @@ var
   Item: T;
   Key: TKey;
   ConcreteGroup: TGrouping<TKey, T>;
-  Enumerator: TEnumerator<T>;
+  Enumerator: System.Generics.Collections.TEnumerator<T>;
 begin
   if not FExecuted then
   begin
-    FGroups := TList<IGrouping<TKey, T>>.Create; // Owns interfaces by ref counting
+    FGroups := System.Generics.Collections.TList<IGrouping<TKey, T>>.Create; // Owns interfaces by ref counting
     Dict := TDictionary<TKey, TGrouping<TKey, T>>.Create;
     try
       Enumerator := FSource.GetEnumerator;

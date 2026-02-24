@@ -2316,7 +2316,7 @@ begin
       
       if PropMap <> nil then
       begin
-        if PropMap.IsIgnored then IsMapped := False;
+        if PropMap.IsIgnored then IsMapped := False;  
         if PropMap.IsNavigation then IsMapped := False; // Navigation properties are NOT columns
         if PropMap.IsPK then IsPK := True;
         if PropMap.IsAutoInc then IsAutoInc := True;

@@ -1,0 +1,83 @@
+{***************************************************************************}
+{                                                                           }
+{           Dext Framework                                                  }
+{                                                                           }
+{           Copyright (C) 2025 Cesar Romero & Dext Contributors             }
+{                                                                           }
+{           Licensed under the Apache License, Version 2.0 (the "License"); }
+{           you may not use this file except in compliance with the License.}
+{           You may obtain a copy of the License at                         }
+{                                                                           }
+{               http://www.apache.org/licenses/LICENSE-2.0                  }
+{                                                                           }
+{           Unless required by applicable law or agreed to in writing,      }
+{           software distributed under the License is distributed on an     }
+{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    }
+{           either express or implied. See the License for the specific     }
+{           language governing permissions and limitations under the        }
+{           License.                                                        }
+{                                                                           }
+{***************************************************************************}
+{                                                                           }
+{  Author:  Cesar Romero                                                    }
+{  Created: 2026-02-24                                                      }
+{                                                                           }
+{  Unit Tests for Dext.Collections                                          }
+{  Covers: IList<T>, TList<T>, IDextDictionary<K,V>, TDextDictionary<K,V>, }
+{  TRawList, TRawDictionary, TCollections factory, enumerators              }
+{                                                                           }
+{***************************************************************************}
+program TestCollections;
+
+{$APPTYPE CONSOLE}
+
+uses
+  Dext.MM,
+  System.SysUtils,
+  Dext.Utils,
+  Dext.Testing,
+  Dext.Collections,
+  Dext.Collections.Dict,
+  TestCollections.Lists in 'TestCollections.Lists.pas',
+  TestCollections.Dictionaries in 'TestCollections.Dictionaries.pas',
+  TestCollections.Factory in 'TestCollections.Factory.pas';
+
+begin
+  SetConsoleCharSet;
+  try
+    WriteLn;
+    WriteLn('=== Dext.Collections Unit Tests ===');
+    WriteLn;
+
+    TTest.SetExitCode(
+      TTest.Configure
+        .Verbose
+        .RegisterFixtures([
+          TListBasicTests,
+          TestCollections.Lists.TListStringTests,
+          TListInterfaceTests,
+          TListOwnershipTests,
+          TListEnumeratorTests,
+          TListLinqTests,
+          TListManagedRecordTests,
+          TDictionaryBasicTests,
+          TDictionaryStringKeyTests,
+          TDictionaryOwnershipTests,
+          TDictionaryStressTests,
+          TDictionaryEnumeratorTests,
+          TDictionaryInterfaceTests,
+          TDictionaryManagedRecordTests,
+          TCollectionsFactoryTests,
+          TFactoryTests
+        ])
+        .Run
+    );
+  except
+    on E: Exception do
+    begin
+      WriteLn('FATAL ERROR: ', E.ClassName, ': ', E.Message);
+      ExitCode := 1;
+    end;
+  end;
+  ConsolePause;
+end.

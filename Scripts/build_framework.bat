@@ -37,57 +37,65 @@ echo Building Dashboard Resources...
 powershell -NoProfile -ExecutionPolicy Bypass -File "build-resources.ps1" -OutputPath "%OUTPUT_PATH%"
 if %ERRORLEVEL% NEQ 0 goto Error
 
+REM Clean output directory once before building all packages
+if exist "%OUTPUT_PATH%" (
+    echo Cleaning output directory...
+    del /Q "%OUTPUT_PATH%\*.dcu" 2>nul
+    del /Q "%OUTPUT_PATH%\*.bpl" 2>nul
+    del /Q "%OUTPUT_PATH%\*.dcp" 2>nul
+)
+
 cd "%~dp0..\Sources"
 
 echo Building Dext.Core...
-msbuild "Dext.Core.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.Core.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building Dext.EF.Core...
-msbuild "Dext.EF.Core.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.EF.Core.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building Dext.Web.Core...
-msbuild "Dext.Web.Core.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.Web.Core.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building Dext.Web.Hubs...
-msbuild "Dext.Web.Hubs.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.Web.Hubs.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building Dext.Hosting...
-msbuild "Dext.Hosting.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.Hosting.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building Dext.Testing...
-msbuild "Dext.Testing.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.Testing.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building Dext.UI...
-msbuild "Dext.UI.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.UI.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building Dext.Net...
-msbuild "Dext.Net.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+msbuild "Dext.Net.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building DextTool...
 cd "%~dp0..\Apps\CLI"
-msbuild "DextTool.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /v:minimal
+msbuild "DextTool.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo Building DextSidecar...
 cd "%~dp0..\Apps\Sidecar"
-msbuild "DextSidecar.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /v:minimal
+msbuild "DextSidecar.dproj" /t:Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.

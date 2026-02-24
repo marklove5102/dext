@@ -381,7 +381,7 @@ type
   private
     FRoot: TBuilderNode;
     FCurrent: TBuilderNode;
-    FNodeStack: TList<TBuilderNode>;
+    FNodeStack: System.Generics.Collections.TList<TBuilderNode>;
     function GetCurrentObject: IDextJsonObject;
     function GetCurrentArray: IDextJsonArray;
   public
@@ -2098,7 +2098,7 @@ end;
 constructor TJsonBuilder.Create;
 begin
   inherited Create;
-  FNodeStack := TList<TBuilderNode>.Create;
+  FNodeStack := System.Generics.Collections.TList<TBuilderNode>.Create;
   
   FRoot := TBuilderNode.Create;
   FRoot.NodeType := ntObject;

@@ -519,7 +519,7 @@ var
   Cmd: IDbCommand;
   Reader: IDbReader;
   EntityId: string;
-  RelatedIds: TList<TValue>;
+  RelatedIds: Dext.Collections.TList<TValue>;
   ItemTypeName: string;
   ItemType: TRttiType;
   TypeName: string;
@@ -564,7 +564,7 @@ begin
   end;
 
   // Execute query
-  RelatedIds := TList<TValue>.Create;
+  RelatedIds := Dext.Collections.TList<TValue>.Create;
   try
     Cmd := GetDbContext.Connection.CreateCommand(SQL);
     Cmd.AddParam('p1', TValue.From<string>(EntityId));
@@ -586,7 +586,7 @@ begin
     else
         ItemType := nil;
 
-    if RelatedIds.Count = 0 then
+    if RelatedIds.GetCount = 0 then
     begin
       // No related items, ensure empty collection
       if FValue.IsEmpty then
@@ -617,13 +617,13 @@ begin
     // Load related objects
     RelatedDbSet := GetDbContext.DataSet(ItemType.Handle);
     
-    SetLength(IdValues, RelatedIds.Count);
-    for var i := 0 to RelatedIds.Count - 1 do
+    SetLength(IdValues, RelatedIds.GetCount);
+    for var i := 0 to RelatedIds.GetCount - 1 do
       IdValues[i] := RelatedIds[i].AsVariant;
     
     PropHelper := TPropExpression.Create('Id');
     Expr := PropHelper.&In(IdValues);
-    ResList := RelatedDbSet.ListObjects(Expr);
+    ResList := RelatedDbSet.ListObjects(Expr) as Dext.Collections.IList<TObject>;
     
     // Populate collection
     UseExistingInterface := False;

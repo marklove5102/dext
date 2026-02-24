@@ -46,6 +46,7 @@ uses
   System.Variants,
   Dext,
   Dext.Collections,
+  Dext.Collections.Base,
   Dext.Core.SmartTypes,
   Dext.Types.Nullable,
   Dext.Types.UUID;
@@ -412,7 +413,7 @@ type
   ShouldList<T> = record
   private
     FEnumerable: IEnumerable<T>;
-    FDextEnumerable: Dext.Collections.IEnumerable<T>;
+    FDextEnumerable: Dext.Collections.Base.IEnumerable<T>;
     FArray: TArray<T>;
     FIsArray: Boolean;
     FIsDext: Boolean;

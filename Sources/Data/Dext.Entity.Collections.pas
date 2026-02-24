@@ -28,6 +28,7 @@ uses
   System.Rtti,
   System.TypInfo,
   Dext.Collections,
+  Dext.Collections.Base,
   Dext.Entity.Core;
 
 type
