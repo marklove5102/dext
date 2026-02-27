@@ -48,17 +48,17 @@ App.Configure(procedure(App: IApplicationBuilder)
 
 | Sufixo | Operador SQL | Exemplo | Descrição |
 |--------|--------------|---------|-----------|
-| `_eq`  | `=`          | `?status_eq=1` | Igual a (padrão) |
-| `_neq` | `<>`         | `?type_neq=2` | Diferente de |
-| `_gt`  | `>`          | `?price_gt=50` | Maior que |
-| `_gte` | `>=`         | `?age_gte=18` | Maior ou igual |
-| `_lt`  | `<`          | `?stock_lt=5` | Menor que |
-| `_lte` | `<=`         | `?date_lte=2025-01-01` | Menor ou igual |
-| `_cont`| `LIKE %x%`   | `?name_cont=Dext` | Contém |
-| `_sw`  | `LIKE x%`    | `?code_sw=ABC` | Começa com |
-| `_ew`  | `LIKE %x`    | `?mail_ew=gmail.com` | Termina com |
-| `_in`  | `IN (...)`   | `?cat_in=1,2,5` | Lista de valores |
-| `_null`| `IS NULL`     | `?addr_null=true` | Verifica valor nulo |
+| `_eq`  | `=`          | `?status_eq=1`         | Igual a (padrão)    |
+| `_neq` | `<>`         | `?type_neq=2`          | Diferente de        |
+| `_gt`  | `>`          | `?price_gt=50`         | Maior que           |
+| `_gte` | `>=`         | `?age_gte=18`          | Maior ou igual      |
+| `_lt`  | `<`          | `?stock_lt=5`          | Menor que           |
+| `_lte` | `<=`         | `?date_lte=2025-01-01` | Menor ou igual      |
+| `_cont`| `LIKE %x%`   | `?name_cont=Dext`      | Contém              |
+| `_sw`  | `LIKE x%`    | `?code_sw=ABC`         | Começa com          |
+| `_ew`  | `LIKE %x`    | `?mail_ew=gmail.com`   | Termina com         |
+| `_in`  | `IN (...)`   | `?cat_in=1,2,5`        | Lista de valores    |
+| `_null`| `IS NULL`    | `?addr_null=true`      | Verifica valor nulo |
 
 ## Performance: Streaming Zero-Allocation
 

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -45,15 +45,15 @@ unit Dext.Core.SmartTypes;
 interface
 
 uses
-  System.Generics.Collections,
-  System.Generics.Defaults,
+  Dext.Collections.Comparers,
   System.Rtti,
   System.SysUtils,
   System.TypInfo,
   System.Variants,
   Dext.Types.Nullable,
   Dext.Specifications.Interfaces,
-  Dext.Specifications.Types;
+  Dext.Specifications.Types,
+  Dext.Core.Reflection;
 
 type
   /// <summary>
@@ -109,7 +109,9 @@ type
   ///   When FInfo is assigned (via TPrototype), operators generate Expression Trees.
   ///   When FInfo is nil (normal usage), operators perform runtime comparisons.
   /// </summary>
+  /// </summary>
   {$RTTI EXPLICIT FIELDS([vcPrivate..vcPublished])}
+  [SmartProp]
   Prop<T> = record
   private
     FValue: T;

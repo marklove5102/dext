@@ -29,7 +29,6 @@ interface
 
 uses
   System.Character,
-  System.Generics.Collections,
   System.Rtti,
   System.SysUtils,
   System.StrUtils,
@@ -37,6 +36,9 @@ uses
   Dext.Types.UUID,
   Dext.DI.Interfaces,
   Dext.Core.Activator,
+  Dext.Collections,
+  Dext.Collections.Base,
+  Dext.Collections.Dict,
   Dext.Json.Types;
 
 type
@@ -107,45 +109,13 @@ type
 
   /// <summary>Deprecated alias for TCaseStyle.</summary>
   TDextCaseStyle = TCaseStyle deprecated 'Use TCaseStyle instead';
-
-  /// <summary>
-  ///   Defines how enumerations are serialized.
-  /// </summary>
-  TEnumStyle = (
-    /// <summary>Serialize as the underlying integer value.</summary>
-    AsNumber, 
-    /// <summary>Serialize as the string name of the enum value.</summary>
-    AsString
-  );
   
   /// <summary>Deprecated alias for TEnumStyle.</summary>
   TDextEnumStyle = TEnumStyle deprecated 'Use TEnumStyle instead';
 
-  /// <summary>
-  ///   Defines JSON output formatting.
-  /// </summary>
-  TJsonFormatting = (
-    /// <summary>Compact JSON (no whitespace).</summary>
-    None, 
-    /// <summary>Indented JSON for readability.</summary>
-    Indented
-  );
-  
   /// <summary>Deprecated alias for TJsonFormatting.</summary>
   TDextFormatting = TJsonFormatting deprecated 'Use TJsonFormatting instead';
 
-  /// <summary>
-  ///   Defines standard date/time formats.
-  /// </summary>
-  TDateFormat = (
-    /// <summary>ISO 8601 format (e.g., "2025-11-16T11:07:37.565").</summary>
-    ISO8601,        
-    /// <summary>Unix timestamp (seconds since epoch).</summary>
-    UnixTimestamp,  
-    /// <summary>Custom format string.</summary>
-    CustomFormat    
-  );
-  
   /// <summary>Deprecated alias for TDateFormat.</summary>
   TDextDateFormat = TDateFormat deprecated 'Use TDateFormat instead';
 
@@ -160,89 +130,9 @@ type
     class function ApplyCaseStyle(const S: string; Style: TCaseStyle): string; static;
   end;
 
-  /// <summary>
-  ///   Configuration settings for the JSON serializer.
-  ///   Use the global function JsonSettings to get a default instance.
-  /// </summary>
-  TJsonSettings = record
-  public
-    Formatting: TJsonFormatting;
-    IgnoreDefaultValues: Boolean;
-    FIgnoreNullValues: Boolean;
-    DateFormat: string;
-    CaseStyle: TCaseStyle;
-    EnumStyle: TEnumStyle;
-    FCaseInsensitive: Boolean;
-    DateFormatStyle: TDateFormat;
-    FServiceProvider: Dext.DI.Interfaces.IServiceProvider;
-    
-    /// <summary>
-    ///   Returns the default settings.
-    /// </summary>
-    class function Default: TJsonSettings; static;
-    
-    /// <summary>
-    ///   Returns settings configured for indented output.
-    /// </summary>
-    class function Indented: TJsonSettings; static;
-    
-    // =====================================================================
-    // New API (without 'With' prefix)
-    // =====================================================================
-    
-    /// <summary>Enables CamelCase naming.</summary>
-    function CamelCase: TJsonSettings;
-    
-    /// <summary>Enables PascalCase naming.</summary>
-    function PascalCase: TJsonSettings;
-    
-    /// <summary>Enables snake_case naming.</summary>
-    function SnakeCase: TJsonSettings;
-    
-    /// <summary>Serializes enums as strings.</summary>
-    function EnumAsString: TJsonSettings;
-    
-    /// <summary>Serializes enums as numbers.</summary>
-    function EnumAsNumber: TJsonSettings;
-    
-    /// <summary>Ignores null values during serialization.</summary>
-    function IgnoreNullValues: TJsonSettings;
-    
-    /// <summary>Enables case-insensitive property matching.</summary>
-    function CaseInsensitive: TJsonSettings;
-    
-    /// <summary>Uses ISO 8601 date format.</summary>
-    function ISODateFormat: TJsonSettings;
-    
-    /// <summary>Uses Unix Timestamp date format.</summary>
-    function UnixTimestamp: TJsonSettings;
-    
-    /// <summary>Uses a custom date format.</summary>
-    function CustomDateFormat(const Format: string): TJsonSettings;
-    
-    /// <summary>Sets the service provider for DI-enabled instantiation.</summary>
-    function ServiceProvider(const AProvider: Dext.DI.Interfaces.IServiceProvider): TJsonSettings;
-    
-    // =====================================================================
-    // Deprecated API (with 'With' prefix) - for backward compatibility
-    // =====================================================================
-    
-    function WithCamelCase: TJsonSettings; deprecated 'Use CamelCase instead';
-    function WithPascalCase: TJsonSettings; deprecated 'Use PascalCase instead';
-    function WithSnakeCase: TJsonSettings; deprecated 'Use SnakeCase instead';
-    function WithEnumAsString: TJsonSettings; deprecated 'Use EnumAsString instead';
-    function WithEnumAsNumber: TJsonSettings; deprecated 'Use EnumAsNumber instead';
-    function WithIgnoreNullValues: TJsonSettings; deprecated 'Use IgnoreNullValues instead';
-    function WithCaseInsensitive: TJsonSettings; deprecated 'Use CaseInsensitive instead';
-    function WithISODateFormat: TJsonSettings; deprecated 'Use ISODateFormat instead';
-    function WithUnixTimestamp: TJsonSettings; deprecated 'Use UnixTimestamp instead';
-    function WithCustomDateFormat(const Format: string): TJsonSettings; deprecated 'Use CustomDateFormat instead';
-    function WithServiceProvider(const AProvider: Dext.DI.Interfaces.IServiceProvider): TJsonSettings; deprecated 'Use ServiceProvider instead';
-  end;
-  
   /// <summary>Deprecated alias for TJsonSettings.</summary>
   TDextSettings = TJsonSettings deprecated 'Use TJsonSettings instead';
-
+  
   /// <summary>
   ///   Main entry point for JSON serialization and deserialization.
   /// </summary>
@@ -250,9 +140,9 @@ type
   private
     class var FProvider: IDextJsonProvider;
     class var FDefaultSettings: TJsonSettings;
-    class var FInterfaceMappings: TDictionary<string, string>;
+    class var FInterfaceMappings: IDictionary<string, string>;
     class function GetProvider: IDextJsonProvider; static;
-    class function GetInterfaceMappings: TDictionary<string, string>; static;
+    class function GetInterfaceMappings: IDictionary<string, string>; static;
   public
     /// <summary>
     ///   Registers a default implementation class for an interface type.
@@ -381,7 +271,7 @@ type
   private
     FRoot: TBuilderNode;
     FCurrent: TBuilderNode;
-    FNodeStack: TList<TBuilderNode>;
+    FNodeStack: IList<TBuilderNode>;
     function GetCurrentObject: IDextJsonObject;
     function GetCurrentArray: IDextJsonArray;
   public
@@ -454,7 +344,6 @@ uses
   System.Variants,
   Dext.Core.Reflection,
   Dext.Core.DateUtils,
-  Dext.Collections,
   Dext.Json.Driver.DextJsonDataObjects; // Default driver
 
 const
@@ -543,6 +432,8 @@ end;
 class function TJsonUtils.ApplyCaseStyle(const S: string; Style: TCaseStyle): string;
 begin
   case Style of
+    TCaseStyle.CaseInherit,
+    TCaseStyle.Unchanged: Result := S;
     TCaseStyle.CamelCase: Result := ToCamelCase(S);
     TCaseStyle.PascalCase: Result := ToPascalCase(S);
     TCaseStyle.SnakeCase: Result := ToSnakeCase(S);
@@ -579,159 +470,6 @@ end;
 procedure JsonDefaultSettings(const ASettings: TJsonSettings);
 begin
   TDextJson.SetDefaultSettings(ASettings);
-end;
-
-{ TJsonSettings }
-
-class function TJsonSettings.Default: TJsonSettings;
-begin
-  FillChar(Result, SizeOf(Result), 0);
-  Result.Formatting := TJsonFormatting.None;
-  Result.FIgnoreNullValues := False;
-  Result.IgnoreDefaultValues := False;
-  Result.DateFormat := 'yyyy-mm-dd"T"hh:nn:ss.zzz';
-  Result.DateFormatStyle := TDateFormat.ISO8601;
-  Result.CaseStyle := TCaseStyle.Unchanged;
-  Result.EnumStyle := TEnumStyle.AsNumber;
-  Result.FCaseInsensitive := False;
-end;
-
-class function TJsonSettings.Indented: TJsonSettings;
-begin
-  Result := Default;
-  Result.Formatting := TJsonFormatting.Indented;
-end;
-
-// =====================================================================
-// New API implementations (without 'With' prefix)
-// =====================================================================
-
-function TJsonSettings.CamelCase: TJsonSettings;
-begin
-  Result := Self;
-  Result.CaseStyle := TCaseStyle.CamelCase;
-end;
-
-function TJsonSettings.PascalCase: TJsonSettings;
-begin
-  Result := Self;
-  Result.CaseStyle := TCaseStyle.PascalCase;
-end;
-
-function TJsonSettings.SnakeCase: TJsonSettings;
-begin
-  Result := Self;
-  Result.CaseStyle := TCaseStyle.SnakeCase;
-end;
-
-function TJsonSettings.EnumAsString: TJsonSettings;
-begin
-  Result := Self;
-  Result.EnumStyle := TEnumStyle.AsString;
-end;
-
-function TJsonSettings.EnumAsNumber: TJsonSettings;
-begin
-  Result := Self;
-  Result.EnumStyle := TEnumStyle.AsNumber;
-end;
-
-function TJsonSettings.IgnoreNullValues: TJsonSettings;
-begin
-  Result := Self;
-  Result.FIgnoreNullValues := True;
-end;
-
-function TJsonSettings.CaseInsensitive: TJsonSettings;
-begin
-  Result := Self;
-  Result.FCaseInsensitive := True;
-end;
-
-function TJsonSettings.ISODateFormat: TJsonSettings;
-begin
-  Result := Self;
-  Result.DateFormatStyle := TDateFormat.ISO8601;
-  Result.DateFormat := 'yyyy-mm-dd"T"hh:nn:ss.zzz';
-end;
-
-function TJsonSettings.UnixTimestamp: TJsonSettings;
-begin
-  Result := Self;
-  Result.DateFormatStyle := TDateFormat.UnixTimestamp;
-  Result.DateFormat := '';
-end;
-
-function TJsonSettings.CustomDateFormat(const Format: string): TJsonSettings;
-begin
-  Result := Self;
-  Result.DateFormatStyle := TDateFormat.CustomFormat;
-  Result.DateFormat := Format;
-end;
-
-function TJsonSettings.ServiceProvider(const AProvider: Dext.DI.Interfaces.IServiceProvider): TJsonSettings;
-begin
-  Result := Self;
-  Result.FServiceProvider := AProvider;
-end;
-
-// =====================================================================
-// Deprecated API implementations (delegate to new methods)
-// =====================================================================
-
-function TJsonSettings.WithCamelCase: TJsonSettings;
-begin
-  Result := CamelCase;
-end;
-
-function TJsonSettings.WithPascalCase: TJsonSettings;
-begin
-  Result := PascalCase;
-end;
-
-function TJsonSettings.WithSnakeCase: TJsonSettings;
-begin
-  Result := SnakeCase;
-end;
-
-function TJsonSettings.WithEnumAsString: TJsonSettings;
-begin
-  Result := EnumAsString;
-end;
-
-function TJsonSettings.WithEnumAsNumber: TJsonSettings;
-begin
-  Result := EnumAsNumber;
-end;
-
-function TJsonSettings.WithIgnoreNullValues: TJsonSettings;
-begin
-  Result := IgnoreNullValues;
-end;
-
-function TJsonSettings.WithCaseInsensitive: TJsonSettings;
-begin
-  Result := CaseInsensitive;
-end;
-
-function TJsonSettings.WithISODateFormat: TJsonSettings;
-begin
-  Result := ISODateFormat;
-end;
-
-function TJsonSettings.WithUnixTimestamp: TJsonSettings;
-begin
-  Result := UnixTimestamp;
-end;
-
-function TJsonSettings.WithCustomDateFormat(const Format: string): TJsonSettings;
-begin
-  Result := CustomDateFormat(Format);
-end;
-
-function TJsonSettings.WithServiceProvider(const AProvider: Dext.DI.Interfaces.IServiceProvider): TJsonSettings;
-begin
-  Result := ServiceProvider(AProvider);
 end;
 
 { TDextJson }
@@ -904,85 +642,90 @@ begin
   Result := TActivator.CreateInstance(FSettings.FServiceProvider, AType);
   Instance := Result.AsObject;
 
-  for Prop in RttiType.GetProperties do
-  begin
-    if (Prop.Visibility <> mvPublic) and (Prop.Visibility <> mvPublished) then
-      Continue;
-
-    if not Prop.IsWritable then
-      Continue;
-
-    PropName := ApplyCaseStyle(Prop.Name);
-    
-    // Check JsonName
-    for var Attr in Prop.GetAttributes do
-      if Attr is JsonNameAttribute then
-      begin
-        PropName := JsonNameAttribute(Attr).Name;
-        Break;
-      end;
-
-    ActualPropName := PropName;
-    Found := AJson.Contains(PropName);
-
-    if (not Found) and FSettings.FCaseInsensitive then
+  try
+    for Prop in RttiType.GetProperties do
     begin
-       // Simple scan
-       var LowerProp := LowerCase(PropName);
-       for var I := 0 to AJson.GetCount - 1 do
-       begin
-          var Key := AJson.GetName(I);
-          if LowerCase(Key) = LowerProp then
-          begin
-             ActualPropName := Key;
-             Found := True;
-             Break;
-          end;
-       end;
-    end;
+      if (Prop.Visibility <> mvPublic) and (Prop.Visibility <> mvPublished) then
+        Continue;
 
-    if not Found then Continue;
+      if not Prop.IsWritable then
+        Continue;
 
-    var Node := AJson.GetNode(ActualPropName);
-    if Node <> nil then
-    begin
-      var Val: TValue;
-      case Node.GetNodeType of
-        jntString: Val := TValue.From<string>(Node.AsString);
-        jntNumber: 
-          begin
-            if (Prop.PropertyType.Handle = TypeInfo(Integer)) then
-              Val := TValue.From<Integer>(Node.AsInteger)
-            else if (Prop.PropertyType.Handle = TypeInfo(Int64)) then
-              Val := TValue.From<Int64>(Node.AsInt64)
-            else
-              Val := TValue.From<Double>(Node.AsDouble);
-          end;
-        jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
-        jntObject: 
-          begin
-            if (Prop.PropertyType.TypeKind = tkClass) then
-              Val := DeserializeObject(Node as IDextJsonObject, Prop.PropertyType.Handle)
-            else if (Prop.PropertyType.TypeKind = tkRecord) then
-              Val := DeserializeRecord(Node as IDextJsonObject, Prop.PropertyType.Handle)
-            else
-              Val := TValue.Empty;
-          end;
-        jntArray: 
-          begin
-            if IsArrayType(Prop.PropertyType.Handle) then
-              Val := DeserializeArray(Node as IDextJsonArray, Prop.PropertyType.Handle)
-            else if IsListType(Prop.PropertyType.Handle) then
-              Val := DeserializeList(Node as IDextJsonArray, Prop.PropertyType.Handle)
-            else
-              Val := TValue.Empty;
-          end;
-        else Val := TValue.Empty;
-      end;
+      PropName := ApplyCaseStyle(Prop.Name);
       
-      if not Val.IsEmpty then
-        TReflection.SetValue(Instance, Prop, Val);
+      // Check JsonName
+      for var Attr in Prop.GetAttributes do
+        if Attr is JsonNameAttribute then
+        begin
+          PropName := JsonNameAttribute(Attr).Name;
+          Break;
+        end;
+
+      ActualPropName := PropName;
+      Found := AJson.Contains(PropName);
+
+      if (not Found) and FSettings.FCaseInsensitive then
+      begin
+         // Simple scan
+         var LowerProp := LowerCase(PropName);
+         for var I := 0 to AJson.GetCount - 1 do
+         begin
+            var Key := AJson.GetName(I);
+            if LowerCase(Key) = LowerProp then
+            begin
+               ActualPropName := Key;
+               Found := True;
+               Break;
+            end;
+         end;
+      end;
+
+      if not Found then Continue;
+
+      var Node := AJson.GetNode(ActualPropName);
+      if Node <> nil then
+      begin
+        var Val: TValue;
+        case Node.GetNodeType of
+          jntString: Val := TValue.From<string>(Node.AsString);
+          jntNumber: 
+            begin
+              if (Prop.PropertyType.Handle = TypeInfo(Integer)) then
+                Val := TValue.From<Integer>(Node.AsInteger)
+              else if (Prop.PropertyType.Handle = TypeInfo(Int64)) then
+                Val := TValue.From<Int64>(Node.AsInt64)
+              else
+                Val := TValue.From<Double>(Node.AsDouble);
+            end;
+          jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
+          jntObject: 
+            begin
+              if (Prop.PropertyType.TypeKind = tkClass) then
+                Val := DeserializeObject(Node as IDextJsonObject, Prop.PropertyType.Handle)
+              else if (Prop.PropertyType.TypeKind = tkRecord) then
+                Val := DeserializeRecord(Node as IDextJsonObject, Prop.PropertyType.Handle)
+              else
+                Val := TValue.Empty;
+            end;
+          jntArray: 
+            begin
+              if IsArrayType(Prop.PropertyType.Handle) then
+                Val := DeserializeArray(Node as IDextJsonArray, Prop.PropertyType.Handle)
+              else if IsListType(Prop.PropertyType.Handle) then
+                Val := DeserializeList(Node as IDextJsonArray, Prop.PropertyType.Handle)
+              else
+                Val := TValue.Empty;
+            end;
+          else Val := TValue.Empty;
+        end;
+        
+        if not Val.IsEmpty then
+          TReflection.SetValue(Instance, Prop, Val);
+      end;
     end;
+  except
+    Instance.Free;
+    raise;
   end;
 end;
 
@@ -1294,9 +1037,9 @@ begin
     if (FieldValue.Kind = tkRecord) and (FieldValue.TypeInfo <> nil) and
        TReflection.IsSmartProp(FieldValue.TypeInfo) then
     begin
-      var Meta := TReflection.GetMetadata(FieldValue.TypeInfo);
-      if Meta.ValueField <> nil then
-        FieldValue := Meta.ValueField.GetValue(FieldValue.GetReferenceToRawData);
+      var Unwrapped: TValue;
+      if TReflection.TryUnwrapProp(FieldValue, Unwrapped) then
+        FieldValue := Unwrapped;
     end;
 
     HasCustomFormat := False;
@@ -1481,9 +1224,9 @@ begin
     if (PropValue.Kind = tkRecord) and (PropValue.TypeInfo <> nil) and
        TReflection.IsSmartProp(PropValue.TypeInfo) then
     begin
-      var Meta := TReflection.GetMetadata(PropValue.TypeInfo);
-      if Meta.ValueField <> nil then
-        PropValue := Meta.ValueField.GetValue(PropValue.GetReferenceToRawData);
+      var Unwrapped: TValue;
+      if TReflection.TryUnwrapProp(PropValue, Unwrapped) then
+        PropValue := Unwrapped;
     end;
 
     // Handle null/empty values
@@ -1675,10 +1418,11 @@ begin
     Result := FDefaultSettings;
 end;
 
-class function TDextJson.GetInterfaceMappings: TDictionary<string, string>;
+class function TDextJson.GetInterfaceMappings: IDictionary<string, string>;
 begin
-  if FInterfaceMappings = nil then
-    FInterfaceMappings := TDictionary<string, string>.Create;
+  if not Assigned(FInterfaceMappings) then
+    FInterfaceMappings := TCollections.CreateDictionary<string, string>;
+  
   Result := FInterfaceMappings;
 end;
 
@@ -1694,8 +1438,11 @@ end;
 
 function TDextSerializer.IsListType(AType: PTypeInfo): Boolean;
 begin
+  if AType = nil then Exit(False);
+  var LName := string(AType.Name);
   Result := ((AType.Kind = tkClass) or (AType.Kind = tkInterface)) and
-            ((Pos('System.Generics.Collections', string(AType.TypeData^.UnitName)) > 0) or
+            (LName.Contains('IList<') or LName.Contains('IEnumerable<') or 
+             LName.Contains('TList<') or LName.Contains('TSmartList<') or
              (Pos('Dext.Collections', string(AType.TypeData^.UnitName)) > 0));
 end;
 
@@ -1842,54 +1589,84 @@ begin
     Result := TActivator.CreateInstance(FSettings.FServiceProvider, AType);
 
     var RttiType := TReflection.GetMetadata(AType).RttiType;
+    
+    // Ensure the list owns its objects if they are classes
+    if (ElementType.Kind = tkClass) then
+    begin
+       var Collection: IDextCollection;
+       if Result.Kind = tkInterface then
+       begin
+         if Supports(Result.AsInterface, IDextCollection, Collection) then
+           Collection.OwnsObjects := True;
+       end
+       else if Result.Kind = tkClass then
+       begin
+        if Supports(Result.AsObject, IDextCollection, Collection) then
+          Collection.OwnsObjects := True
+        else
+        begin
+          // Try fetching via RTTI if Supports failed (common in some generic scenarios)
+          var OwnsProp := RttiType.GetProperty('OwnsObjects');
+          if (OwnsProp <> nil) and (OwnsProp.PropertyType.Handle = TypeInfo(Boolean)) then
+            OwnsProp.SetValue(Result.AsObject, True);
+        end;
+      end;
+    end;
+
     AddMethod := RttiType.GetMethod('Add');
     if not Assigned(AddMethod) then
       raise EDextJsonException.CreateFmt('Could not find Add method for list type %s', [AType.NameFld.ToString]);
 
-    for I := 0 to AJson.GetCount - 1 do
-    begin
-      var Node := AJson.GetNode(I);
-      if (Node <> nil) and (Node.GetNodeType = jntObject) then
+    try
+      for I := 0 to AJson.GetCount - 1 do
       begin
-        if ElementType.Kind = tkClass then
-          ElementValue := DeserializeObject(Node as IDextJsonObject, ElementType)
-        else
-          ElementValue := DeserializeRecord(Node as IDextJsonObject, ElementType);
-      end
-      else
-      begin
-        case ElementType.Kind of
-          tkInteger: ElementValue := TValue.From<Integer>(AJson.GetInteger(I));
-          tkInt64: ElementValue := TValue.From<Int64>(AJson.GetInt64(I));
-          tkFloat: ElementValue := TValue.From<Double>(AJson.GetDouble(I));
-          tkString, tkLString, tkWString, tkUString:
-            ElementValue := TValue.From<string>(AJson.GetString(I));
-          tkEnumeration:
-            if ElementType = TypeInfo(Boolean) then
-              ElementValue := TValue.From<Boolean>(AJson.GetBoolean(I))
-            else
-              ElementValue := TValue.Empty;
-          tkRecord:
-            if ElementType = TypeInfo(TGUID) then
-              ElementValue := TValue.From<TGUID>(StringToGUID(AJson.GetString(I)))
-            else if ElementType = TypeInfo(TUUID) then
-              ElementValue := TValue.From<TUUID>(TUUID.FromString(AJson.GetString(I)))
-            else
-              ElementValue := TValue.Empty;
-          tkDynArray:
-            begin
-              if (Node <> nil) and (Node.GetNodeType = jntArray) then
-                 ElementValue := DeserializeArray(Node as IDextJsonArray, ElementType)
-              else
-                 ElementValue := TValue.Empty;
-            end;
+        var Node := AJson.GetNode(I);
+        if (Node <> nil) and (Node.GetNodeType = jntObject) then
+        begin
+          if ElementType.Kind = tkClass then
+            ElementValue := DeserializeObject(Node as IDextJsonObject, ElementType)
           else
-            ElementValue := TValue.Empty;
+            ElementValue := DeserializeRecord(Node as IDextJsonObject, ElementType);
+        end
+        else
+        begin
+          case ElementType.Kind of
+            tkInteger: ElementValue := TValue.From<Integer>(AJson.GetInteger(I));
+            tkInt64: ElementValue := TValue.From<Int64>(AJson.GetInt64(I));
+            tkFloat: ElementValue := TValue.From<Double>(AJson.GetDouble(I));
+            tkString, tkLString, tkWString, tkUString:
+              ElementValue := TValue.From<string>(AJson.GetString(I));
+            tkEnumeration:
+              if ElementType = TypeInfo(Boolean) then
+                ElementValue := TValue.From<Boolean>(AJson.GetBoolean(I))
+              else
+                ElementValue := TValue.Empty;
+            tkRecord:
+              if ElementType = TypeInfo(TGUID) then
+                ElementValue := TValue.From<TGUID>(StringToGUID(AJson.GetString(I)))
+              else if ElementType = TypeInfo(TUUID) then
+                ElementValue := TValue.From<TUUID>(TUUID.FromString(AJson.GetString(I)))
+              else
+                ElementValue := TValue.Empty;
+            tkDynArray:
+              begin
+                if (Node <> nil) and (Node.GetNodeType = jntArray) then
+                   ElementValue := DeserializeArray(Node as IDextJsonArray, ElementType)
+                else
+                   ElementValue := TValue.Empty;
+              end;
+            else
+              ElementValue := TValue.Empty;
+          end;
         end;
-      end;
 
-      if not ElementValue.IsEmpty then
-        AddMethod.Invoke(Result, [ElementValue]);
+        if not ElementValue.IsEmpty then
+          AddMethod.Invoke(Result, [ElementValue]);
+      end;
+    except
+      if (AType.Kind = tkClass) and (not Result.IsEmpty) then
+         Result.AsObject.Free;
+      raise;
     end;
   finally
     // No context to free
@@ -2098,7 +1875,7 @@ end;
 constructor TJsonBuilder.Create;
 begin
   inherited Create;
-  FNodeStack := TList<TBuilderNode>.Create;
+  FNodeStack := TCollections.CreateList<TBuilderNode>;
   
   FRoot := TBuilderNode.Create;
   FRoot.NodeType := ntObject;
@@ -2115,7 +1892,7 @@ var
 begin
   for Node in FNodeStack do
     Node.Free;
-  FNodeStack.Free;
+  FNodeStack := nil;
   inherited;
 end;
 
@@ -2257,6 +2034,6 @@ end;
 initialization
 
 finalization
-  TDextJson.FInterfaceMappings.Free;
+  TDextJson.FInterfaceMappings := nil;
 
 end.

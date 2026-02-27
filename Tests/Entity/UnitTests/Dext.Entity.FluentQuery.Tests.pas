@@ -1,10 +1,9 @@
-unit Dext.Entity.FluentQuery.Tests;
+﻿unit Dext.Entity.FluentQuery.Tests;
 
 interface
 
 uses
   System.SysUtils,
-  System.Generics.Collections,
   Dext.Assertions,
   Dext.Testing.Attributes,
   Dext.Entity.Query,

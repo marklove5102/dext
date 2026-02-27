@@ -1,4 +1,4 @@
-unit Dext.Entity.Migrations.Json.Tests;
+﻿unit Dext.Entity.Migrations.Json.Tests;
 
 interface
 
@@ -6,7 +6,7 @@ uses
   DUnitX.TestFramework,
   System.SysUtils,
   System.Classes,
-  System.Generics.Collections,
+  Dext.Collections,
   Dext.Entity.Migrations.Operations,
   Dext.Entity.Migrations.Serializers.Json,
   Dext.Json,

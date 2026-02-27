@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -33,7 +33,9 @@ interface
 
 uses
   System.SysUtils,
-  System.Generics.Collections,
+  Dext.Collections,
+  Dext.Collections.Base,
+  Dext.Collections.Dict,
   Dext.Entity.Query,
   Dext.Specifications.Interfaces;
 
@@ -51,9 +53,9 @@ type
     
     // State
     FExecuted: Boolean;
-    FOuterEnumerator: TEnumerator<TOuter>;
-    FInnerLookup: TDictionary<TKey, TList<TInner>>;
-    FCurrentInnerList: TList<TInner>;
+    FOuterEnumerator: IEnumerator<TOuter>;
+    FInnerLookup: IDictionary<TKey, IList<TInner>>;
+    FCurrentInnerList: IList<TInner>;
     FCurrentInnerIndex: Integer;
     
     procedure BuildLookup;
@@ -112,16 +114,9 @@ begin
 end;
 
 destructor TJoinIterator<TOuter, TInner, TKey, TResult>.Destroy;
-var
-  List: TList<TInner>;
 begin
-  if FInnerLookup <> nil then
-  begin
-    for List in FInnerLookup.Values do
-      List.Free;
-    FInnerLookup.Free;
-  end;
-  FOuterEnumerator.Free;
+  FInnerLookup := nil;
+  FOuterEnumerator := nil;
   inherited;
 end;
 
@@ -129,15 +124,15 @@ procedure TJoinIterator<TOuter, TInner, TKey, TResult>.BuildLookup;
 var
   Item: TInner;
   Key: TKey;
-  List: TList<TInner>;
+  List: IList<TInner>;
 begin
-  FInnerLookup := TDictionary<TKey, TList<TInner>>.Create;
+  FInnerLookup := TCollections.CreateDictionary<TKey, IList<TInner>>;
   for Item in FInner do
   begin
     Key := FInnerKeySelector(Item);
     if not FInnerLookup.TryGetValue(Key, List) then
     begin
-      List := TList<TInner>.Create;
+      List := TCollections.CreateList<TInner>;
       FInnerLookup.Add(Key, List);
     end;
     List.Add(Item);

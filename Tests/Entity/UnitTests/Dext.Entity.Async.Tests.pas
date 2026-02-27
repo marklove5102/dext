@@ -1,11 +1,10 @@
-unit Dext.Entity.Async.Tests;
+﻿unit Dext.Entity.Async.Tests;
 
 interface
 
 uses
   System.SysUtils,
   System.Classes,
-  System.Generics.Collections,
   Dext.Assertions,
   Dext.Testing.Attributes,
   Dext.Entity.Core,

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -29,10 +29,11 @@ interface
 
 uses
   System.Classes,
-  System.SysUtils,
+  Dext.Collections,
+  Dext.Collections.Stack,
+  System.Net.HttpClient,
   System.SyncObjs,
-  System.Generics.Collections,
-  System.Net.HttpClient;
+  System.SysUtils;
 
 type
   /// <summary>
@@ -40,7 +41,7 @@ type
   /// </summary>
   TConnectionPool = class
   private
-    FPool: TStack<THttpClient>;
+    FPool: IStack<THttpClient>;
     FLock: TCriticalSection;
     FMaxPoolSize: Integer;
     FCount: Integer;
@@ -64,7 +65,7 @@ constructor TConnectionPool.Create(AMaxPoolSize: Integer);
 begin
   inherited Create;
   FMaxPoolSize := AMaxPoolSize;
-  FPool := TStack<THttpClient>.Create;
+  FPool := TCollections.CreateStack<THttpClient>;
   FLock := TCriticalSection.Create;
   FCount := 0;
 end;
@@ -72,7 +73,7 @@ end;
 destructor TConnectionPool.Destroy;
 begin
   Clear;
-  FPool.Free;
+  // FPool is ARC managed
   FLock.Free;
   inherited;
 end;

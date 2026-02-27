@@ -4,31 +4,31 @@ interface
 
 uses
   System.Classes,
-  System.Generics.Collections,
-  System.Generics.Defaults,
   System.IOUtils,
   System.Math,
   System.StrUtils,
   System.SysUtils,
   Dext.Collections,
+  Dext.Collections.HashSet,
+  Dext.Collections.Comparers,
   DelphiAST.Classes,
   DelphiAST.Consts,
   DelphiAST,
   Dext.Utils;
 
 type
-  TOrdinalIgnoreCaseComparer = class(TEqualityComparer<string>)
+  TOrdinalIgnoreCaseComparer = class(TInterfacedObject, IEqualityComparer<string>)
   public
-    function Equals(const Left, Right: string): Boolean; override;
-    function GetHashCode(const Value: string): Integer; override;
+    function Equals(const Left, Right: string): Boolean; reintroduce;
+    function GetHashCode(const Value: string): Integer; reintroduce;
   end;
 
   TExtractedUnit = class
   public
     UnitName: string;
-    Types: TList<string>;
-    GenericTypes: TList<string>; 
-    Consts: TList<string>;
+    Types: IList<string>;
+    GenericTypes: IList<string>; 
+    Consts: IList<string>;
     constructor Create(const AName: string);
     destructor Destroy; override;
   end;
@@ -36,16 +36,16 @@ type
   TFacadeGenerator = class
   private
     FTargetUnitName: string;
-    FSkippedUnits: TList<string>;
+    FSkippedUnits: IList<string>;
     FProcessedUnits: Integer;
     function IsFieldName(const AName: string): Boolean;
     function IsUnitProcessed(const UnitName: string): Boolean;
   protected
     FSourcePath: string;
     FSearchPattern: string;
-    FExcludedUnits: THashSet<string>;
-    FParsedUnits: TObjectList<TExtractedUnit>;
-    FGlobalTypeNames: THashSet<string>; 
+    FExcludedUnits: IHashSet<string>;
+    FParsedUnits: IList<TExtractedUnit>;
+    FGlobalTypeNames: IHashSet<string>; 
     
     // Configuration
     FStartAliasTag: string;
@@ -65,7 +65,7 @@ type
     function IsGeneric(Node: TSyntaxNode): Boolean;
     function GetUnitName(Root: TSyntaxNode; const FileName: string): string;
   public
-    property ParsedUnits: TObjectList<TExtractedUnit> read FParsedUnits;
+    property ParsedUnits: IList<TExtractedUnit> read FParsedUnits;
     constructor Create(const SourcePath, Wildcard: string; const Excluded: TArray<string>);
     destructor Destroy; override;
     procedure Execute; virtual;
@@ -100,16 +100,13 @@ end;
 constructor TExtractedUnit.Create(const AName: string);
 begin
   UnitName := AName;
-  Types := TList<string>.Create;
-  GenericTypes := TList<string>.Create;
-  Consts := TList<string>.Create;
+  Types := TCollections.CreateList<string>;
+  GenericTypes := TCollections.CreateList<string>;
+  Consts := TCollections.CreateList<string>;
 end;
 
 destructor TExtractedUnit.Destroy;
 begin
-  Types.Free;
-  GenericTypes.Free;
-  Consts.Free;
   inherited;
 end;
 
@@ -121,14 +118,13 @@ var
 begin
   FSourcePath := SourcePath;
   FSearchPattern := Wildcard;
-  FExcludedUnits := THashSet<string>.Create(TOrdinalIgnoreCaseComparer.Create);
-  FGlobalTypeNames := THashSet<string>.Create(TOrdinalIgnoreCaseComparer.Create); 
+  FExcludedUnits := TCollections.CreateHashSet<string>;
+  FGlobalTypeNames := TCollections.CreateHashSet<string>; 
   for S in Excluded do
     FExcludedUnits.Add(S);
     
-  FParsedUnits := TObjectList<TExtractedUnit>.Create(True);
-  FSkippedUnits := TList<string>.Create;
-  FSkippedUnits := TList<string>.Create;
+  FParsedUnits := TCollections.CreateList<TExtractedUnit>(True);
+  FSkippedUnits := TCollections.CreateList<string>;
   FProcessedUnits := 0;
   
   // Defaults
@@ -144,10 +140,7 @@ end;
 
 destructor TFacadeGenerator.Destroy;
 begin
-  FParsedUnits.Free;
-  FSkippedUnits.Free;
-  FExcludedUnits.Free;
-  FGlobalTypeNames.Free;
+  // All collections are ARC managed
   inherited;
 end;
 
@@ -513,13 +506,12 @@ var
   procedure AddUses;
   var
     LUnitInfo: TExtractedUnit;
-    LUnits: TList<string>;
+    LUnits: IList<string>;
     i: Integer;
   begin
       NewLines.Add('  // Generated Uses');
-      LUnits := TList<string>.Create;
-      try
-        for LUnitInfo in FParsedUnits do
+      LUnits := TCollections.CreateList<string>;
+      for LUnitInfo in FParsedUnits do
         begin
            if SameText(LUnitInfo.UnitName, TargetUnitName) then Continue;
 
@@ -534,9 +526,6 @@ var
           else
             NewLines.Add('  ' + LUnits[i]);
         end;
-      finally
-        LUnits.Free;
-      end;
   end;
   
 begin

@@ -1,11 +1,10 @@
-unit Dext.Entity.Pooling.Test;
+﻿unit Dext.Entity.Pooling.Test;
 
 interface
 
 uses
   DUnitX.TestFramework,
   System.SysUtils,
-  System.Generics.Collections,
   System.Classes,
   System.Threading, 
   System.Diagnostics,
