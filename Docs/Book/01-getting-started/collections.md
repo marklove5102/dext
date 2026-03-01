@@ -121,3 +121,49 @@ for var Admin in Users.Where(IsAdmin) do
 // Required: Result is stored/returned
 Result := Users.Where(IsAdmin).ToList;
 ```
+
+---
+
+## Modern Concurrency: Channels and Lock-Free
+
+Most collection libraries (including standard Delphi ones) rely on `TCriticalSection` or `TMonitor` to ensure thread safety. The major issue with this approach is that *locks* create bottlenecks on multi-core systems, preventing true scalability.
+
+In Dext, we solve this by introducing concurrency patterns inspired by the Go programming language, focusing on **Lock-Free** operations.
+
+### IChannel&lt;T&gt; (Go-style Channels)
+
+The most efficient way to share data between threads is not by locking lists, but by passing messages through uninterrupted channels.
+
+`IChannel<T>` provides:
+
+- **Zero Lock Contention**: Achieve maximum performance without the throttling caused by thread locks.
+- **Backpressure**: Channels with limited capacity (`Bounded`) prevent a faster producer thread from overloading memory with pending messages.
+
+```pascal
+var
+  Chan: IChannel<TOrder>;
+  ProducerTask, ConsumerTask: ITask;
+begin
+  // Create a channel with a limit of 100 messages (Backpressure)
+  Chan := TChannel<TOrder>.CreateBounded(100);
+
+  // Producer Thread
+  ProducerTask := TTask.Run(procedure
+    begin
+      // Produce and send to the channel
+      Chan.Write(Order1);
+      Chan.Write(Order2);
+      Chan.Close; // Important: Close to signal the end
+    end);
+
+  // Consumer Thread
+  ConsumerTask := TTask.Run(procedure
+    begin
+      // Consume until the channel is closed and emptied
+      while Chan.IsOpen do
+        ProcessOrder(Chan.Read);
+    end);
+end;
+```
+
+For scenarios where memory limits are not a concern or volumes are small, you can instantiate an infinite channel: `TChannel<T>.CreateUnbounded;`.
