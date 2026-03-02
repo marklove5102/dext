@@ -20,6 +20,7 @@ Dext.Entity é um ORM completo para Delphi com suporte a múltiplos bancos de da
 14. [Multi-Mapping](mapeamento-aninhado.md) - Objetos aninhados & Value Objects
 
 > 📦 **Exemplos**:
+>
 > - [Orm.EntityDemo](../../../Examples/Orm.EntityDemo/) (Padrão)
 > - [Orm.EntityStyles](../../../Examples/Orm.EntityStyles/) (Comparativo: POCO vs Smart Properties)
 
@@ -65,11 +66,9 @@ begin
   User := Ctx.Users.Find(1);
   
   // Query
+  var u := Prototype.Entity<TUser>;
   var UsuariosAtivos := Ctx.Users
-    .Where(function(U: TUser): Boolean
-      begin
-        Result := U.Name.Contains('João');
-      end)
+    .Where(u.Name.Contains('João'))
     .ToList;
 end;
 ```

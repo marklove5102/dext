@@ -86,14 +86,12 @@ var Resultados := Context.Users
 > **Por que camelCase?** Para diferenciar de variáveis de método PascalCase.  
 > Em queries multi-tabela com Include/Join, cada tabela tem sua própria var inline (`var u`, `var o`, `var p`).
 
-### Expressão Lambda
+### Expressão Lambda (Prototype)
 
 ```pascal
+var u := Prototype.Entity<TUser>;
 var UsuariosAtivos := Context.Users
-  .Where(function(U: TUser): Boolean
-    begin
-      Result := U.IsActive;
-    end)
+  .Where(u.IsActive)
   .ToList;
 ```
 
@@ -146,12 +144,9 @@ type
     Email: string;
   end;
 
+var u := Prototype.Entity<TUser>;
 var Dtos := Context.Users
-  .Select<TUserDto>(function(U: TUser): TUserDto
-    begin
-      Result.Nome := U.Name;
-      Result.Email := U.Email;
-    end)
+  .Select<TUserDto>([u.Name, u.Email])
   .ToList;
 ```
 
@@ -182,6 +177,7 @@ type
 ```
 
 Use na query:
+
 ```pascal
 var o := TOrder.Props;
 var Pagos := Context.Orders
@@ -213,15 +209,16 @@ Queries são lazy (preguiçosas) — executadas apenas quando você chama um mé
 | `.Any` | Executa e retorna boolean |
 | `.Find(id)` | Executa e retorna por PK |
 
-
 ## Performance & Cache
 
 ### Cache de Geração SQL
+
 O Dext inclui um singleton `TSQLCache` que armazena o SQL gerado para consultas com base em sua estrutura (Assinatura AST). Isso melhora significativamente a performance de queries repetitivas.
 
 O cache é **ativado por padrão** e é thread-safe.
 
 #### Desativando o Cache
+
 Se precisar desativar (ex: para depuração):
 
 ```pascal

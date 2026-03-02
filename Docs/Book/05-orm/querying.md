@@ -100,14 +100,12 @@ ExistingUser := Context.Users
   .FirstOrDefault;
 ```
 
-### Lambda Expression
+### Lambda Expression (Prototype)
 
 ```pascal
+var u := Prototype.Entity<TUser>;
 var ActiveUsers := Context.Users
-  .Where(function(U: TUser): Boolean
-    begin
-      Result := U.IsActive;
-    end)
+  .Where(u.IsActive)
   .ToList;
 ```
 
@@ -170,12 +168,9 @@ type
     Email: string;
   end;
 
+var u := Prototype.Entity<TUser>;
 var Dtos := Context.Users
-  .Select<TUserDto>(function(U: TUser): TUserDto
-    begin
-      Result.Name := U.Name;
-      Result.Email := U.Email;
-    end)
+  .Select<TUserDto>([u.Name, u.Email])
   .ToList;
 ```
 
@@ -206,6 +201,7 @@ type
 ```
 
 Use in queries:
+
 ```pascal
 var o := TOrder.Props;
 var PaidOrders := Context.Orders
@@ -245,15 +241,16 @@ var Query := Context.Users.Where(TUser.Props.Age > 18);
 var Users := Query.ToList;
 ```
 
-
 ## Performance & Caching
 
 ### SQL Generation Cache
+
 Dext includes a singleton `TSQLCache` that caches the generated SQL for queries based on their structure (AST Signature). This significantly improves performance for repetitive queries by skipping the SQL generation phase.
 
 The cache is **enabled by default** and is thread-safe.
 
 #### Disabling the Cache
+
 If you need to disable caching (e.g., for debugging or specific dynamic scenarios), you can toggle it globally:
 
 ```pascal

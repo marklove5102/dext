@@ -50,11 +50,8 @@ List.Should.NotContain(Item);
 List.Should.ContainOnly(Item1, Item2);
 List.Should.BeOrdered;
 
-// All items match predicate
-List.Should.AllMatch(function(X: Integer): Boolean
-  begin
-    Result := X > 0;
-  end);
+var u := Prototype.Entity<TUser>;
+Users.Should.AllMatch(u.Age > 0);
 ```
 
 ## Object Assertions

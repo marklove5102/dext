@@ -40,12 +40,10 @@ Order.Should.BeOfType<TOrder>;
 ### Listas e Coleções
 
 ```pascal
+var u := Prototype.Entity<TUser>;
 Users.Should.NotBeEmpty;
 Users.Should.Contain(AdminUser);
-Users.Should.All.Satisfy(function(U: TUser): Boolean
-  begin
-    Result := U.IsActive;
-  end);
+Users.Should.All.Satisfy(u.IsActive);
 ```
 
 ### Exceções

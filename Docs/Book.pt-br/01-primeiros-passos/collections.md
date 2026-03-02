@@ -83,28 +83,26 @@ As Coleções Dext trazem o poder da programação funcional para o Delphi.
 ### Filtragem e Busca
 
 ```pascal
+var u := Prototype.Entity<TUser>;
+
 // Encontrar todos os admins ativos
-var Admins := Users.Where(function(U: TUser): Boolean
-  begin
-    Result := U.IsActive and (U.Role = 'Admin');
-  end).ToList;
+var Admins := Users.Where(u.IsActive and (u.Role = 'Admin')).ToList;
 
 // Verificar se existe algum usuário de London
-if Users.Any(function(U: TUser): Boolean begin Result := U.City = 'London' end) then
+if Users.Any(u.City = 'London') then
   Writeln('Londoners encontrados!');
 
 // Obter o primeiro match ou nil
-var FirstVip := Users.FirstOrDefault(function(U: TUser): Boolean begin Result := U.IsVip end);
+var FirstVip := Users.FirstOrDefault(u.IsVip);
 ```
 
 ### Projeções (Transformação)
 
 ```pascal
+var u := Prototype.Entity<TUser>;
+
 // Obter uma lista apenas dos nomes (lista de strings)
-var Names := Users.Select<string>(function(U: TUser): string
-  begin
-    Result := U.Name;
-  end).ToList;
+var Names := Users.Select<string>(u.Name).ToList;
 ```
 
 ---

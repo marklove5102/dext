@@ -56,14 +56,18 @@ Utilizar uma variável de ambiente simplifica seus Library Paths e permite alter
 
 ## 3. Configuração do Library Path (DCUs)
 
-Para que a IDE encontre os arquivos compilados do framework:
+Para que a IDE encontre os arquivos compilados do framework, você deve adicionar o caminho para a pasta de saída (`Output`) no Library Path.
+
+> [!IMPORTANT]
+> A IDE do Delphi **não expande** variáveis dinâmicas de projeto (como `$(Platform)` ou `$(Config)`) nas configurações globais de Library Path. Por isso, você deve adicionar caminhos específicos para as combinações que deseja utilizar.
 
 1. No Delphi, vá em **Tools** > **Options** > **Language** > **Delphi** > **Library**.
 2. Selecione a **Platform** desejada (ex: Windows 32-bit).
-3. No campo **Library Path**, adicione o caminho para a pasta de saída usando a variável `$(DEXT)` (que aponta para Sources):
-    * `$(DEXT)\..\Output\$(ProductVersion)_$(Platform)_$(Config)`
+3. No campo **Library Path**, adicione o caminho para a pasta onde os arquivos `.dcu` foram gerados. Use a variável `$(DEXT)` para simplificar:
+    * `$(DEXT)\..\Output\37.0_win32_debug` (para Debug)
+    * `$(DEXT)\..\Output\37.0_win32_release` (para Release)
 
-> **Nota:** Se você alternar entre as configurações de Debug e Release ou Plataformas (Win32/Win64), lembre-se de ajustar este caminho ou adicionar ambos.
+*Nota: Repita o processo para outras plataformas (ex: Win64), ajustando o nome da pasta conforme gerado na compilação do Passo 1.*
 
 ## 4. Configuração do Browsing Path (Arquivos Fonte)
 
@@ -155,7 +159,7 @@ O Library Path não contém a pasta dos DCUs compilados, ou o framework não foi
 **Solução:**
 
 1. Certifique-se de que você compilou o framework Dext para a plataforma correta (Win32/Win64) e configuração (Debug/Release).
-2. Verifique se o Library Path aponta para a pasta `Output\$(Platform)\$(Config)` correta.
+2. Verifique se o Library Path aponta para a pasta `Output` correta (ex: `Output\37.0_win32_debug`).
 3. Se estiver alternando entre Debug e Release, atualize o Library Path de acordo ou adicione ambos os caminhos.
 
 ### Debug stepping não funciona / Não consigo navegar para o fonte

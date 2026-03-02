@@ -24,15 +24,20 @@ Using an environment variable simplifies your Library Paths and allows you to sw
 
     ![DEXT Environment Variable](../../../Images/ide-env-var.png)
 
-### 2. Configure Library Paths
+### 2. Configure Library Path (DCUs)
 
-Add the following paths to your **Library Path** (Tools > Options > Language > Delphi > Library) for your target platforms (Win32, Win64, Linux64).
+Add the paths to the output folder (`Output`) for your target platforms (Win32, Win64).
 
-If you set up the `$(DEXT)` variable as described above:
+> [!IMPORTANT]
+> The Delphi IDE **does not expand** dynamic project variables like `$(Platform)` or `$(Config)` in global Library Path settings. Therefore, you must specify the exact paths for each configuration you wish to use.
 
-```text
-$(DEXT)\..\Output\$(ProductVersion)_$(Platform)_$(Config)
-```
+1. In Delphi, go to **Tools** > **Options** > **Language** > **Delphi** > **Library**.
+2. Select your target **Platform**.
+3. In the **Library Path** field, add the path to where the `.dcu` files were generated. Use the `$(DEXT)` variable to simplify the path:
+    - `$(DEXT)\..\Output\37.0_win32_debug` (for Debug)
+    - `$(DEXT)\..\Output\37.0_win32_release` (for Release)
+
+*Note: Repeat for other platforms (e.g., Win64), adjusting the folder name based on what was generated in Step 1.*
 
 ### 3. Configure Browsing Path
 

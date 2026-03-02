@@ -21,6 +21,7 @@ Dext.Entity is a full-featured ORM for Delphi with support for multiple database
 15. [Multi-Mapping](nested-mapping.md) - Nested objects & Value Objects
 
 > 📦 **Examples**:
+>
 > - [Orm.EntityDemo](../../../Examples/Orm.EntityDemo/) (Standard)
 > - [Orm.EntityStyles](../../../Examples/Orm.EntityStyles/) (Comparison: POCO vs Smart Properties)
 
@@ -66,11 +67,9 @@ begin
   User := Ctx.Users.Find(1);
   
   // Query
+  var u := Prototype.Entity<TUser>;
   var ActiveUsers := Ctx.Users
-    .Where(function(U: TUser): Boolean
-      begin
-        Result := U.Name.Contains('John');
-      end)
+    .Where(u.Name.Contains('John'))
     .ToList;
 end;
 ```
