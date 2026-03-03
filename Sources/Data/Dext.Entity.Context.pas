@@ -540,23 +540,20 @@ begin
             // Entities<T> is called, which registers the type. 
             // We just need to associate this specific property name with the type T.
             
-            // Invoke the getter to ensure Entities<T> is called and the DbSet is created/cached
-            var Val := Prop.GetValue(Self);
-            
-            // After invocation, the DbSet for T is in FCache. 
-            // We can try to peek into the IDbSet to see its Entity Type, 
-            // or we use a more robust way to register the association.
-            
-            var DbSet: IDbSet;
-            if (not Val.IsEmpty) and Supports(Val.AsInterface, IDbSet, DbSet) then
-            begin
-               // Register this property name as the "Discovery Name" for this entity type
-               // TModelBuilder will use it if no explicit table name is provided.
-               TModelBuilder.Instance.RegisterDiscoveryName(DbSet.EntityType, Prop.Name);
-            end;
-         end;
-       end;
-     end;
+             var Val := Prop.GetValue(Self);
+             try
+               var DbSet: IDbSet;
+               if (not Val.IsEmpty) and Supports(Val.AsInterface, IDbSet, DbSet) then
+               begin
+                 // Register this property name as the "Discovery Name" for this entity type
+                 TModelBuilder.Instance.RegisterDiscoveryName(DbSet.EntityType, Prop.Name);
+               end;
+             finally
+               Val := TValue.Empty;
+             end;
+          end;
+        end;
+      end;
    finally
       Ctx.free;
    end;

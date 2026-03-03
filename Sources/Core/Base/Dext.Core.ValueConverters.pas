@@ -28,17 +28,17 @@ unit Dext.Core.ValueConverters;
 interface
 
 uses
-  System.SysUtils,
+  System.Classes,
+  System.DateUtils,
   System.Rtti,
+  System.SyncObjs,
+  System.SysUtils,
   System.TypInfo,
+  System.Variants,
   Dext.Collections,
   Dext.Collections.Dict,
-  System.Variants,
-  System.DateUtils,
-  System.Classes,
-  Dext.Types.UUID,
   Dext.Core.DateUtils,
-  Dext.Utils;
+  Dext.Types.UUID;
 
 type
   IValueConverter = interface
@@ -48,7 +48,8 @@ type
 
   TValueConverterRegistry = class
   private
-    class var FConverters: IDictionary<string, IValueConverter>; // Key: "SourceKind:TargetKind" or specific types
+    class var FConverters: IDictionary<string, IValueConverter>; 
+    class var FLock: TCriticalSection;
     class constructor Create;
     class destructor Destroy;
     class function GetKey(ASource, ATarget: PTypeInfo): string;
@@ -160,6 +161,7 @@ uses
 
 class constructor TValueConverterRegistry.Create;
 begin
+  FLock := System.SyncObjs.TCriticalSection.Create;
   FConverters := TCollections.CreateDictionary<string, IValueConverter>;
   
   // Register Default Converters
@@ -197,7 +199,7 @@ begin
   
   // Class -> Class (for object references and inheritance)
   RegisterConverter(tkClass, tkClass, TClassToClassConverter.Create);
-
+ 
   // String -> Primitives (Extra safety for SQLite/Web)
   RegisterConverter(TypeInfo(string), TypeInfo(Integer), TVariantToIntegerConverter.Create);
   RegisterConverter(TypeInfo(string), TypeInfo(Int64), TVariantToIntegerConverter.Create);
@@ -242,6 +244,7 @@ end;
 class destructor TValueConverterRegistry.Destroy;
 begin
   FConverters := nil;
+  FLock.Free;
 end;
 
 class function TValueConverterRegistry.GetKey(ASource, ATarget: PTypeInfo): string;
@@ -251,27 +254,42 @@ end;
 
 class procedure TValueConverterRegistry.RegisterConverter(ASource, ATarget: PTypeInfo; AConverter: IValueConverter);
 begin
-  FConverters.AddOrSetValue(GetKey(ASource, ATarget), AConverter);
+  FLock.Enter;
+  try
+    FConverters.AddOrSetValue(GetKey(ASource, ATarget), AConverter);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class procedure TValueConverterRegistry.RegisterConverter(ASourceKind, ATargetKind: TTypeKind; AConverter: IValueConverter);
 begin
-  // Use a special prefix for Kinds
-  FConverters.AddOrSetValue(Format('K:%d:%d', [Ord(ASourceKind), Ord(ATargetKind)]), AConverter);
+  FLock.Enter;
+  try
+    // Use a special prefix for Kinds
+    FConverters.AddOrSetValue(Format('K:%d:%d', [Ord(ASourceKind), Ord(ATargetKind)]), AConverter);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 class function TValueConverterRegistry.GetConverter(ASource, ATarget: PTypeInfo): IValueConverter;
 begin
-  // 1. Try Exact Match
-  if not FConverters.TryGetValue(GetKey(ASource, ATarget), Result) then
-  begin
-    // 2. Try Kind Match
-    if not FConverters.TryGetValue(Format('K:%d:%d', [Ord(ASource.Kind), Ord(ATarget.Kind)]), Result) then
+  FLock.Enter;
+  try
+    // 1. Try Exact Match
+    if not FConverters.TryGetValue(GetKey(ASource, ATarget), Result) then
     begin
-      // 3. Special Case: Variant Source
-      if (ASource.Kind = tkVariant) then
-         FConverters.TryGetValue(Format('K:%d:%d', [Ord(tkVariant), Ord(ATarget.Kind)]), Result);
+      // 2. Try Kind Match
+      if not FConverters.TryGetValue(Format('K:%d:%d', [Ord(ASource.Kind), Ord(ATarget.Kind)]), Result) then
+      begin
+        // 3. Special Case: Variant Source
+        if (ASource.Kind = tkVariant) then
+           FConverters.TryGetValue(Format('K:%d:%d', [Ord(tkVariant), Ord(ATarget.Kind)]), Result);
+      end;
     end;
+  finally
+    FLock.Leave;
   end;
 end;
 

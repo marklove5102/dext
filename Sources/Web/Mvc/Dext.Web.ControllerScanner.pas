@@ -474,6 +474,7 @@ end;
 
 destructor TControllerScanner.Destroy;
 begin
+  FCtx.Free;
   inherited;
 end;
 
@@ -487,7 +488,6 @@ end;
 
 procedure TControllerScanner.ExecuteCachedMethod(Context: IHttpContext; const CachedMethod: TCachedMethod);
 var
-  Ctx: TRttiContext;
   ControllerType: TRttiType;
   Method: TRttiMethod;
   ControllerInstance: TObject;
@@ -508,36 +508,36 @@ begin
     end;
   end;
 
-  Ctx := TRttiContext.Create;
-  // ✅ RE-OBTER O TIPO EM TEMPO DE EXECUÇÃO
-  ControllerType := Ctx.FindType(CachedMethod.TypeName);
-  if ControllerType = nil then
-  begin
-    SafeWriteLn('❌ Controller type not found: ' + CachedMethod.TypeName);
-    Context.Response.Status(500).Json(Format('{"error": "Controller type not found: %s"}', [CachedMethod.TypeName]));
-    Exit;
-  end;
-
-  // ✅ ENCONTRAR O MÉTODO EM TEMPO DE EXECUÇÃO
-  Method := nil;
-  for var M in ControllerType.GetMethods do
-  begin
-    if M.Name = CachedMethod.MethodName then
+  // Use the scanner's FCtx instead of creating a new TRttiContext per request.
+  // This avoids creating/freeing RTTI pool references on every request.
+    // ✅ RE-OBTER O TIPO EM TEMPO DE EXECUÇÃO
+    ControllerType := FCtx.FindType(CachedMethod.TypeName);
+    if ControllerType = nil then
     begin
-      Method := M;
-      Break;
+      SafeWriteLn('❌ Controller type not found: ' + CachedMethod.TypeName);
+      Context.Response.Status(500).Json(Format('{"error": "Controller type not found: %s"}', [CachedMethod.TypeName]));
+      Exit;
     end;
-  end;
 
-  if Method = nil then
-  begin
-    SafeWriteLn('❌ ' + Format('Method not found: %s.%s', [CachedMethod.TypeName, CachedMethod.MethodName]));
-    Context.Response.Status(500).Json(Format('{"error": "Method not found: %s.%s"}', [CachedMethod.TypeName, CachedMethod.MethodName]));
-    Exit;
-  end;
+    // ✅ ENCONTRAR O MÉTODO EM TEMPO DE EXECUÇÃO
+    Method := nil;
+    for var M in ControllerType.GetMethods do
+    begin
+      if M.Name = CachedMethod.MethodName then
+      begin
+        Method := M;
+        Break;
+      end;
+    end;
 
-  var FilterList: IList<TCustomAttribute> := TCollections.CreateList<TCustomAttribute>;
-  try
+    if Method = nil then
+    begin
+      SafeWriteLn('❌ ' + Format('Method not found: %s.%s', [CachedMethod.TypeName, CachedMethod.MethodName]));
+      Context.Response.Status(500).Json(Format('{"error": "Method not found: %s.%s"}', [CachedMethod.TypeName, CachedMethod.MethodName]));
+      Exit;
+    end;
+
+    var FilterList: IList<TCustomAttribute> := TCollections.CreateList<TCustomAttribute>;
     // Controller Level
     for FilterAttr in ControllerType.GetAttributes do
       if Supports(FilterAttr, IActionFilter) then
@@ -657,10 +657,6 @@ begin
         Context.Response.Status(500).Json(Format('{"error": "Execution failed: %s"}', [E.Message]));
       end;
     end;
-
-  finally
-    // FilterList is ARC
-  end;
 end;
 
 end.

@@ -350,26 +350,9 @@ begin
 end;
 
 function TList<T>.GetItem(Index: Integer): T;
-var
-  P: Pointer;
+type P_T = ^T;
 begin
-  P := FCore.Data + (Index * FCore.ElementSize);
-  if not FCore.IsManaged then
-  begin
-    case FCore.ElementSize of
-      1: PByte(@Result)^ := PByte(P)^;
-      2: PWord(@Result)^ := PWord(P)^;
-      4: PCardinal(@Result)^ := PCardinal(P)^;
-      8: PUInt64(@Result)^ := PUInt64(P)^;
-    else
-      System.Move(P^, Result, FCore.ElementSize);
-    end;
-  end
-  else
-  begin
-    FillChar(Result, SizeOf(T), 0);
-    System.CopyArray(@Result, P, FCore.TypeInfo, 1);
-  end;
+  Result := P_T(FCore.Data + (Index * FCore.ElementSize))^;
 end;
 
 procedure TList<T>.SetItem(Index: Integer; const Value: T);
@@ -582,6 +565,9 @@ begin
     LCount := FCore.Count;
     if (Index >= 0) and (Index < LCount) then
     begin
+      if FOwnsObjects and FIsClass then
+        Notify(Self, GetItem(Index), cnRemoved);
+        
       if Index < LCount - 1 then
       begin
         LData := FCore.Data;

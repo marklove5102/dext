@@ -177,9 +177,16 @@ end;
 
 destructor TWebApplication.Destroy;
 begin
-  Stop; // Ensure cleanup
-  FAppBuilder := nil;
-  FServiceProvider := nil;
+  Stop; // Ensure cleanup via Teardown
+  
+  // Ensure ALL interface fields are niled even if Teardown was skipped or partial.
+  // Teardown nils these too, but we must be defensive in the destructor.
+  FActiveHost := nil;     // Releases TIndyWebServer → pipeline closures → middlewares
+  FScanner := nil;        // Releases TControllerScanner → FCtx (TRttiContext)
+  FAppBuilder := nil;     // Releases TApplicationBuilder → routes, middleware registrations
+  FServiceProvider := nil; // Releases root DI provider → singletons
+  FServices := nil;       // Releases TDextServiceCollection → descriptors
+  FConfiguration := nil;  // Releases TConfigurationRoot → ALL config providers
   inherited Destroy;
 end;
 

@@ -49,7 +49,6 @@ type
     FContext: IHttpContext;
     FObjectType: TRttiType;
     FObject: TValue;
-    FCtx: TRttiContext;
   public
     constructor Create(const AContext: IHttpContext; ATypeInfo: Pointer; const AObject: TValue);
     destructor Destroy; override;
@@ -139,6 +138,14 @@ type
 
     class function NoContent: IResult;
     
+    class function Unauthorized: IResult; overload;
+    class function Unauthorized(const AMessage: string): IResult; overload;
+    class function Unauthorized<T>(const AValue: T): IResult; overload;
+
+    class function Forbidden: IResult; overload;
+    class function Forbidden(const AMessage: string): IResult; overload;
+    class function Forbidden<T>(const AValue: T): IResult; overload;
+
     class function InternalServerError(const AMessage: string): IResult; overload;
     class function InternalServerError(const E: Exception): IResult; overload;
     
@@ -179,17 +186,25 @@ implementation
 { TOutputFormatterContext }
 
 constructor TOutputFormatterContext.Create(const AContext: IHttpContext; ATypeInfo: Pointer; const AObject: TValue);
+var
+  Ctx: TRttiContext;
 begin
   inherited Create;
   FContext := AContext;
-  FCtx := TRttiContext.Create;
-  FObjectType := FCtx.GetType(ATypeInfo);
+  // Use stack-local TRttiContext to avoid holding a reference to the global RTTI pool.
+  // The TRttiType pointer remains valid as long as the pool exists.
+  Ctx := TRttiContext.Create;
+  try
+    FObjectType := Ctx.GetType(ATypeInfo);
+  finally
+    Ctx.Free;
+  end;
   FObject := AObject;
 end;
 
 destructor TOutputFormatterContext.Destroy;
 begin
-  FCtx.Free;
+  FContext := nil;
   inherited;
 end;
 
@@ -390,6 +405,36 @@ end;
 class function Results.NoContent: IResult;
 begin
   Result := TStatusCodeResult.Create(204);
+end;
+
+class function Results.Unauthorized: IResult;
+begin
+  Result := TStatusCodeResult.Create(401);
+end;
+
+class function Results.Unauthorized(const AMessage: string): IResult;
+begin
+  Result := TJsonResult.Create(Format('{"error": "%s"}', [AMessage]), 401);
+end;
+
+class function Results.Unauthorized<T>(const AValue: T): IResult;
+begin
+  Result := TObjectResult<T>.Create(AValue, 401);
+end;
+
+class function Results.Forbidden: IResult;
+begin
+  Result := TStatusCodeResult.Create(403);
+end;
+
+class function Results.Forbidden(const AMessage: string): IResult;
+begin
+  Result := TJsonResult.Create(Format('{"error": "%s"}', [AMessage]), 403);
+end;
+
+class function Results.Forbidden<T>(const AValue: T): IResult;
+begin
+  Result := TObjectResult<T>.Create(AValue, 403);
 end;
 
 class function Results.InternalServerError(const AMessage: string): IResult;

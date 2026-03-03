@@ -440,9 +440,7 @@ begin
       procedure(Options: TDbContextOptions)
       begin
         TConfigurationBinder.Bind(Configuration, Options);
-      end
-    )
-  );
+      end));
 end;
 
 { TPersistence }
@@ -539,7 +537,13 @@ begin
         // 2. Dialect Resolution
         var Dialect := Options.Dialect;
         if Dialect = nil then
-          Dialect := TSQLiteDialect.Create;
+        begin
+          var DetectedDialect := TDialectFactory.DetectDialect(Options.DriverName);
+          if DetectedDialect <> ddUnknown then
+             Dialect := TDialectFactory.CreateDialect(DetectedDialect)
+          else
+             Dialect := TSQLiteDialect.Create;
+        end;
 
         // 3. Create Context
         var Ctx := TDbContextClass(T).Create(Connection, Dialect, nil);

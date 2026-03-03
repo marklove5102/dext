@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -197,9 +197,10 @@ end;
 
 destructor TApplicationBuilder.Destroy;
 begin
-  FServiceProvider := nil;
-  // FMiddlewares is ARC
+  FDisposables := nil;
+  FMiddlewares := nil;
   FRoutes := nil;
+  FServiceProvider := nil;
 
   // Dispose all registered objects handled by ObjectList
   // FDisposables is ARC

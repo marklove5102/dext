@@ -235,10 +235,12 @@ var
   Desc: TServiceDescriptor;
 begin
   inherited Create;
-  // Create our own list container, but share the items (owned by Collection)
-  FDescriptors := TCollections.CreateList<TServiceDescriptor>(False);
+  // Clone descriptors so the provider owns its own copies.
+  // This is critical: factory closures in descriptors capture interface references
+  // (like IConfiguration) that MUST be released when the provider is destroyed.
+  FDescriptors := TCollections.CreateList<TServiceDescriptor>(True);
   for Desc in ADescriptors do
-    FDescriptors.Add(Desc);
+    FDescriptors.Add(Desc.Clone);
   FOwnsDescriptors := True;
 
   // Class-based storage (DI owns these objects)
@@ -358,6 +360,10 @@ var
   Instance: TObject;
   Intf: IInterface;
 begin
+  // Special handling for IServiceProvider to return Self without dictionary cycle
+  if AServiceType.IsInterface and IsEqualGUID(AServiceType.AsInterface, IServiceProvider) then
+    Exit(TObject(Self));
+
   Descriptor := FindDescriptor(AServiceType);
   if not Assigned(Descriptor) then
     Exit(nil);
