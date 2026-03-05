@@ -43,6 +43,36 @@ type
   ServiceConstructorAttribute = class(TCustomAttribute)
   end;
 
+  /// <summary>
+  ///   Marks a field or property for Dependency Injection.
+  ///   Useful for Property/Field Injection or for ensuring RTTI 
+  ///   is generated for generic interface types like IList<T>.
+  /// </summary>
+  InjectAttribute = class(TCustomAttribute)
+  private
+    FTargetTypeInfo: Pointer; // Use Pointer to avoid requiring TypInfo in interface if possible, or just use PTypeInfo. I'll include TypInfo if needed.
+  public
+    constructor Create; overload;
+    constructor Create(ATargetTypeInfo: Pointer); overload;
+
+    property TargetTypeInfo: Pointer read FTargetTypeInfo;
+  end;
+
+
 implementation
+
+{ InjectAttribute }
+
+constructor InjectAttribute.Create;
+begin
+  inherited Create;
+  FTargetTypeInfo := nil;
+end;
+
+constructor InjectAttribute.Create(ATargetTypeInfo: Pointer);
+begin
+  inherited Create;
+  FTargetTypeInfo := ATargetTypeInfo;
+end;
 
 end.

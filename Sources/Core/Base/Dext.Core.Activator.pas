@@ -75,6 +75,7 @@ type
     class constructor Create;
     class destructor Destroy;
     class function TryResolveService(AProvider: IServiceProvider; AParamType: TRttiType; out AResolvedService: TValue): Boolean;
+    class procedure InjectFields(AProvider: IServiceProvider; AInstance: TObject; ATypeObj: TRttiType);
   end;
 
 implementation
@@ -157,6 +158,72 @@ begin
     begin
       AResolvedService := TValue.From(Obj);
       Result := True;
+    end;
+  end;
+end;
+
+class procedure TActivator.InjectFields(AProvider: IServiceProvider; AInstance: TObject; ATypeObj: TRttiType);
+var
+  Field: TRttiField;
+  Prop: TRttiProperty;
+  Attr: TCustomAttribute;
+  InjectAttr: InjectAttribute;
+  TargetType: PTypeInfo;
+  ResolvedValue: TValue;
+begin
+  if (AProvider = nil) or (AInstance = nil) or (ATypeObj = nil) then Exit;
+
+  // Process Fields
+  for Field in ATypeObj.GetFields do
+  begin
+    InjectAttr := nil;
+    for Attr in Field.GetAttributes do
+      if Attr is InjectAttribute then
+      begin
+        InjectAttr := InjectAttribute(Attr);
+        Break;
+      end;
+      
+    if InjectAttr <> nil then
+    begin
+      TargetType := Field.FieldType.Handle;
+      if InjectAttr.TargetTypeInfo <> nil then
+        TargetType := PTypeInfo(InjectAttr.TargetTypeInfo);
+        
+      if TargetType <> nil then
+      begin
+        ResolvedValue := CreateInstance(AProvider, TargetType);
+        if not ResolvedValue.IsEmpty then
+          Field.SetValue(AInstance, ResolvedValue);
+      end;
+    end;
+  end;
+
+  // Process Properties
+  for Prop in ATypeObj.GetProperties do
+  begin
+    if not Prop.IsWritable then Continue;
+    
+    InjectAttr := nil;
+    for Attr in Prop.GetAttributes do
+      if Attr is InjectAttribute then
+      begin
+        InjectAttr := InjectAttribute(Attr);
+        Break;
+      end;
+      
+    if InjectAttr <> nil then
+    begin
+      TargetType := Prop.PropertyType.Handle;
+      if InjectAttr.TargetTypeInfo <> nil then
+        TargetType := PTypeInfo(InjectAttr.TargetTypeInfo);
+        
+      if TargetType <> nil then
+      begin
+        ResolvedValue := CreateInstance(AProvider, TargetType);
+        if not ResolvedValue.IsEmpty then
+          Prop.SetValue(AInstance, ResolvedValue);
+      end;
     end;
   end;
 end;
@@ -324,6 +391,7 @@ begin
           begin
             // Use this constructor (marked with [ServiceConstructor])
             Result := Method.Invoke(AClass, Args).AsObject;
+            InjectFields(AProvider, Result, TypeObj);
             Exit;
           end;
         end;
@@ -364,7 +432,10 @@ begin
     end;
 
     if BestMethod <> nil then
-      Result := BestMethod.Invoke(AClass, BestArgs).AsObject
+    begin
+      Result := BestMethod.Invoke(AClass, BestArgs).AsObject;
+      InjectFields(AProvider, Result, TypeObj);
+    end
     else
     begin
       // ERROR: No suitable constructor found (or dependencies missing)
@@ -434,6 +505,7 @@ begin
         if Matched then
         begin
           Result := Method.Invoke(AClass, Args).AsObject;
+          InjectFields(AProvider, Result, TypeObj);
           Exit;
         end;
       end;
