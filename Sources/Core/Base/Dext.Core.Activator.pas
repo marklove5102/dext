@@ -62,7 +62,7 @@ type
 
     class procedure RegisterDefault(ABase: TClass; AImpl: TClass); overload;
     class procedure RegisterDefault(AInterface: PTypeInfo; AImpl: TClass); overload;
-    class procedure RegisterDefault<TIntf: interface; TImpl: class>; overload;
+    class procedure RegisterDefault<TService: IInterface; TImplementation: class>; overload;
     class function ResolveImplementation(AClass: TClass): TClass;
     class function GetDictionaryValueType(AType: PTypeInfo): PTypeInfo;
     class function IsListType(AType: PTypeInfo): Boolean;
@@ -111,12 +111,9 @@ begin
     FInterfaceDefaultImpl.AddOrSetValue(AInterface, AImpl);
 end;
 
-class procedure TActivator.RegisterDefault<TIntf, TImpl>;
+class procedure TActivator.RegisterDefault<TService, TImplementation>;
 begin
-  if PTypeInfo(TypeInfo(TIntf))^.Kind = tkClass then
-    RegisterDefault(TClass(GetTypeData(TypeInfo(TIntf))^.ClassType), TImpl)
-  else
-    RegisterDefault(TypeInfo(TIntf), TImpl);
+  RegisterDefault(TypeInfo(TService), TImplementation);
 end;
 
 class function TActivator.ResolveImplementation(AClass: TClass): TClass;
