@@ -129,6 +129,8 @@ var
   Ctx: TRttiContext;
   Builder: TModelBuilder;
 begin
+  if not Assigned(AOptions) then Exit;
+  
   if Length(AOptions.WhitelistedClasses) > 0 then
   begin
     for C in AOptions.WhitelistedClasses do

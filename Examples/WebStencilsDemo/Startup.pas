@@ -71,11 +71,7 @@ begin
       begin
         Opts.UseSqlite('webstencils-customers.db');
       end)
-    .AddWebStencils(
-      ViewOptions
-        .TemplateRoot(TPath.GetFullPath('wwwroot/views'))
-        .DefaultLayout('_Layout.html')
-        .WhiteListEntities);
+    .AddWebStencils;
 end;
 
 procedure TStartup.Configure(const App: IWebApplication);

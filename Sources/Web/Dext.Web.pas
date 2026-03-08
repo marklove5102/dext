@@ -622,9 +622,17 @@ type
     function AddContentNegotiation: TDextServices;
 
     /// <summary>
-    ///   Registers the Web Stencils view engine (requires Delphi 12.2+).
+    ///  Enables Web Stencils view engine using default conventions (CoC):
+    ///  - Template Root: 'wwwroot/views' (Full Path)
+    ///  - Default Layout: '_Layout.html'
+    ///  - Whitelist Entities: Enabled
     /// </summary>
-    function AddWebStencils(AConfig: TProc<TViewOptions> = nil): TDextServices; overload;
+    function AddWebStencils: TDextServices; overload;
+    
+    /// <summary>
+    ///  Enables Web Stencils view engine with custom configuration.
+    /// </summary>
+    function AddWebStencils(AConfig: TProc<TViewOptions>): TDextServices; overload;
 
     /// <summary>
     ///   Registers the Web Stencils view engine using pre-configured options.
@@ -1473,6 +1481,14 @@ begin
   Result := Self;
 end;
 {$ENDIF}
+
+function TWebServicesHelper.AddWebStencils: TDextServices;
+var
+  LOptions: TViewOptions;
+begin
+  LOptions := TViewOptions.Create;
+  Result := AddWebStencils(LOptions);
+end;
 
 function TWebServicesHelper.AddWebStencils(AConfig: TProc<TViewOptions>): TDextServices;
 begin

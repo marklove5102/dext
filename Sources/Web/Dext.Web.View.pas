@@ -32,6 +32,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.IOUtils,
   System.Rtti,
   Dext.Collections.Base,
   Dext.Collections.Dict,
@@ -330,9 +331,10 @@ end;
 
 constructor TViewOptions.Create;
 begin
-  FTemplateRoot := 'wwwroot/views';
+  FTemplateRoot := TPath.GetFullPath('wwwroot/views');
   FAutoReload := True;
   FDefaultLayout := '_Layout.html';
+  FWhitelistEntities := True;
 end;
 
 { TViewOptionsBuilder }

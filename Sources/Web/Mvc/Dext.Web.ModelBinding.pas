@@ -967,9 +967,14 @@ begin
       RouteParams := Context.Request.RouteParams;
       QueryParams := Context.Request.Query;
 
-      // Pre-load body JSON once (if there's a body)
+      // Pre-load body JSON once if it's a POST/PUT/PATCH and likely contains JSON
+      var LMethod := Context.Request.Method;
+      var LIsPostLike := (LMethod = 'POST') or (LMethod = 'PUT') or (LMethod = 'PATCH');
+      var LContentType := Context.Request.GetHeader('Content-Type').ToLower;
+      var LIsJson := LContentType.Contains('application/json');
+
       Stream := Context.Request.Body;
-      if (Stream <> nil) and (Stream.Size > 0) then
+      if (Stream <> nil) and (Stream.Size > 0) and (LIsPostLike or LIsJson) then
       begin
         if Stream is TBytesStream then
           BodyBytes := TBytesStream(Stream).Bytes
