@@ -208,7 +208,7 @@ var
 begin
   Result := TDextStringDictionary.Create as IStringDictionary;
   if AQuery = '' then Exit;
-
+  
   P := PChar(AQuery);
   Len := Length(AQuery);
   EndP := P + Len;
@@ -327,7 +327,7 @@ var
         if (Stream.Read(Bt, 1) <> 1) or (Bt <> B[J]) then
         begin
           Match := False;
-          Stream.Position := Stream.Position - J;
+          Stream.Position := Stream.Position - J; 
           Break;
         end;
       end;
@@ -358,7 +358,7 @@ var
       Result := '';
       KeyQuoted := Key + '="';
       KeyUnquoted := Key + '=';
-
+      
       // Try quoted first
       Idx := Pos(KeyQuoted, ContentDisp.ToLower);
       if Idx > 0 then
@@ -400,16 +400,16 @@ var
         if S = '' then Break;
         HeaderList.Add(S);
       end;
-
+      
       HeaderEndPos := Stream.Position;
-
+      
       for Line in HeaderList do
       begin
         var LowerLine := Line.ToLower;
         if LowerLine.StartsWith('content-disposition:') then
         begin
           ContentDisp := Line;
-
+          
           PartName := ExtractValue('name');
           // For filename, try 'filename' (not filename*)
           PartFileName := ExtractValue('filename');
@@ -417,7 +417,7 @@ var
         else if LowerLine.StartsWith('content-type:') then
           PartContentType := Trim(Copy(Line, 14, MaxInt));
       end;
-
+      
       if PartName <> '' then
       begin
         PartStream := TMemoryStream.Create;
@@ -439,10 +439,10 @@ var
 begin
   ContentTypeStr := FRequestInfo.ContentType;
   if not ContentTypeStr.ToLower.StartsWith('multipart/form-data') then Exit;
-
+  
   var Idx := Pos('boundary=', ContentTypeStr.ToLower);
   if Idx = 0 then Exit;
-
+  
   // Extract boundary value and clean it up
   var BoundaryValue := Copy(ContentTypeStr, Idx + 9, MaxInt);
   // Remove any trailing parameters (e.g., "; charset=...")
@@ -453,21 +453,21 @@ begin
   BoundaryValue := BoundaryValue.Trim;
   if (Length(BoundaryValue) > 1) and (BoundaryValue[1] = '"') and (BoundaryValue[Length(BoundaryValue)] = '"') then
     BoundaryValue := Copy(BoundaryValue, 2, Length(BoundaryValue) - 2);
-
+  
   Boundary := '--' + BoundaryValue;
   BoundaryBytes := TEncoding.UTF8.GetBytes(Boundary);
-
+  
   Stream := GetBody;
   if (Stream = nil) or (Stream.Size = 0) then
     Exit;
-
+  
   P := FindBytes(BoundaryBytes, 0);
   while P >= 0 do
   begin
     NextP := FindBytes(BoundaryBytes, P + Length(BoundaryBytes));
     if NextP < 0 then Break;
-
-    ParsePart(P + Length(BoundaryBytes) + 2, NextP);
+    
+    ParsePart(P + Length(BoundaryBytes) + 2, NextP); 
     P := NextP;
   end;
 end;
@@ -496,7 +496,7 @@ begin
         FormData := FRequestInfo.UnparsedParams
       else
         FormData := FRequestInfo.FormParams;
-
+        
       FBodyStream := TMemoryStream.Create;
       var Bytes := TEncoding.UTF8.GetBytes(FormData);
       if Length(Bytes) > 0 then
@@ -604,7 +604,7 @@ begin
   if Length(ABuffer) > 0 then
     Stream.WriteBuffer(ABuffer[0], Length(ABuffer));
   Stream.Position := 0;
-
+  
   FResponseInfo.ContentStream := Stream;
   FResponseInfo.FreeContentStream := True; // Indy will free the stream
 end;
@@ -613,19 +613,19 @@ procedure TIndyHttpResponse.Write(const AStream: TStream);
 begin
   FResponseInfo.ContentStream := AStream;
   FResponseInfo.FreeContentStream := False; // We do not own external stream unless specified, usually caller owns it or it's a TFileStream.
-  // Wait, IHttpResponse usually implies transferring ownership or copying?
+  // Wait, IHttpResponse usually implies transferring ownership or copying? 
   // In pure abstraction, Write(Stream) usually copies. But for performance we might want to just assign.
   // Let's assume we copy for safety unless it's a memory stream we created.
   // BUT the roadmap says "support envio eficiente", implies no copy.
-  // Dext.Web.Indy usually runs on same thread.
-
+  // Dext.Web.Indy usually runs on same thread. 
+  
   // Safe implementation for now:
   // If we assign AStream to ContentStream, Indy will read from it. We must ensure AStream stays alive.
   // Since we don't control AStream lifecycle here easily without taking ownership, copying is safer for general use.
   // However, for "Stream Writing" feature, we usually want to stream LARGE files.
-  // Let's implement copy for now to be safe and consistent with buffering.
+  // Let's implement copy for now to be safe and consistent with buffering. 
   // Optimization to TFileStream can be done if we detect type or add WriteFile().
-
+  
   var MemStream := TMemoryStream.Create;
   MemStream.CopyFrom(AStream, 0);
   MemStream.Position := 0;
@@ -653,13 +653,13 @@ begin
   FContext := AContext;
   FRequest := TIndyHttpRequest.Create(ARequestInfo);
   FResponse := TIndyHttpResponse.Create(AResponseInfo);
-
-  // Create a new scope for THIS request.
-  // All Scoped services (like DbContext) resolved from this provider
+  
+  // Create a new scope for THIS request. 
+  // All Scoped services (like DbContext) resolved from this provider 
   // will be isolated to this request and destroyed when this context is released.
   FScope := AServices.CreateScope;
   FServices := FScope.ServiceProvider;
-
+  
 end;
 
 destructor TIndyHttpContext.Destroy;
@@ -726,4 +726,3 @@ begin
 end;
 
 end.
-

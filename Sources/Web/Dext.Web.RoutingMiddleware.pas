@@ -88,9 +88,9 @@ begin
 
       // Authorization Check
       if Length(Metadata.Security) > 0 then
-      begin
+      begin        
         if (AContext.User = nil) or not AContext.User.Identity.IsAuthenticated then
-        begin
+        begin          
           AContext.Response.StatusCode := 401;
           for var Scheme in Metadata.Security do
           begin
@@ -103,7 +103,7 @@ begin
           AContext.Response.SetContentType('application/json; charset=utf-8');
           AContext.Response.Write('{"error": "Unauthorized", "message": "Authentication required. Please provide valid credentials."}');
           Exit;
-        end;
+        end;        
       end;
 
       Handler(AContext);
@@ -119,4 +119,3 @@ begin
 end;
 
 end.
-

@@ -6,7 +6,8 @@ uses
   System.SysUtils,
   System.TypInfo,
   Dext.Core.Span,
-  Dext.Collections.Memory;
+  Dext.Collections.Memory,
+  Dext.Collections.Comparers;
 
 const
   SVO_BUFFER_SIZE = 64; // Bytes reservados na Stack
@@ -41,6 +42,10 @@ type
     procedure Push(const Value: T); inline; // Alias for Add
     procedure Pop;
     procedure Clear;
+    
+    function IndexOf(const Value: T): NativeInt;
+    procedure Remove(const Value: T);
+    procedure RemoveAt(Index: NativeInt);
     
     // Sub-segmentation
     function AsSpan: TSpan<T>;
@@ -206,13 +211,53 @@ begin
   end;
 end;
 
+function TVector<T>.IndexOf(const Value: T): NativeInt;
+var
+  I: NativeInt;
+  Comparer: Dext.Collections.Comparers.IEqualityComparer<T>;
+begin
+  Comparer := Dext.Collections.Comparers.TEqualityComparer<T>.Default;
+  for I := 0 to FCount - 1 do
+    if Comparer.Equals(GetItem(I), Value) then
+      Exit(I);
+  Result := -1;
+end;
+
+procedure TVector<T>.RemoveAt(Index: NativeInt);
+var
+  TargetPtr, NextPtr: Pointer;
+begin
+  if (Index < 0) or (Index >= FCount) then Exit;
+  
+  TargetPtr := GetItemPtr(Index);
+  RawFinalizeElement(TargetPtr, SizeOf(T), System.TypeInfo(T));
+  
+  if Index < FCount - 1 then
+  begin
+    NextPtr := GetItemPtr(Index + 1);
+    RawMove(NextPtr, TargetPtr, FCount - 1 - Index, SizeOf(T), System.TypeInfo(T));
+  end;
+  
+  Dec(FCount);
+  Inc(FVersion);
+end;
+
+procedure TVector<T>.Remove(const Value: T);
+var
+  Idx: NativeInt;
+begin
+  Idx := IndexOf(Value);
+  if Idx >= 0 then
+    RemoveAt(Idx);
+end;
+
 function TVector<T>.GetItem(Index: NativeInt): T;
 begin
   {$IFDEF DEBUG}
   if (Index < 0) or (Index >= FCount) then
     raise Exception.CreateFmt('TVector index out of bounds: %d (Count: %d)', [Index, FCount]);
   {$ENDIF}
-  Move(PByte(GetDataPtr)[Index * SizeOf(T)], Result, SizeOf(T));
+  RawCopyElement(@Result, PByte(GetDataPtr) + (Index * SizeOf(T)), SizeOf(T), System.TypeInfo(T));
 end;
 
 procedure TVector<T>.SetItem(Index: NativeInt; const Value: T);

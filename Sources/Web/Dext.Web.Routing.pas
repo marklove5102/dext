@@ -34,12 +34,12 @@ uses
   Dext.Collections,
   Dext.Collections.Dict,
   Dext.Web.Interfaces;
-  // Note: We don't import Versioning here to avoid circular dep if possible,
-  // or we define IApiVersionReader in Interfaces?
+  // Note: We don't import Versioning here to avoid circular dep if possible, 
+  // or we define IApiVersionReader in Interfaces? 
   // For now, let's assume simple string matching or header reading inside logic if we pass Context.
   // Actually, we can just extract version in Middleware and pass it?
   // No, the interface change allows passing Context.
-
+  
 type
   // Forward delcaration if needed, but IApiVersionReader is in another unit.
   // Let's rely on manually checking context headers/query for now to minimize dependencies,
@@ -128,7 +128,7 @@ var
 begin
   FSegments := nil;
   FParameterNames := nil;
-
+  
   StartIdx := 1;
   InParam := False;
   Idx := 1;
@@ -154,7 +154,7 @@ begin
         SetLength(FSegments, Length(FSegments) + 1);
         FSegments[High(FSegments)].IsLiteral := False;
         FSegments[High(FSegments)].Text := Copy(APattern, StartIdx, Idx - StartIdx);
-
+        
         SetLength(FParameterNames, Length(FParameterNames) + 1);
         FParameterNames[High(FParameterNames)] := FSegments[High(FSegments)].Text;
       end;
@@ -163,7 +163,7 @@ begin
     end;
     Inc(Idx);
   end;
-
+  
   if StartIdx <= Length(APattern) then
   begin
     if InParam then
@@ -188,21 +188,21 @@ begin
   for I := 0 to High(FSegments) do
   begin
     Seg := FSegments[I];
-
+    
     if Seg.IsLiteral then
     begin
       if Length(APath) - PathIdx + 1 < Length(Seg.Text) then
         Exit(False);
-
+        
       if StrLIComp(PChar(APath) + PathIdx - 1, PChar(Seg.Text), Length(Seg.Text)) <> 0 then
         Exit(False);
-
+        
       Inc(PathIdx, Length(Seg.Text));
     end
     else
     begin
       ValueStart := PathIdx;
-
+      
       if I < High(FSegments) then
       begin
         while (PathIdx <= Length(APath)) and (APath[PathIdx] <> '/') do
@@ -221,18 +221,18 @@ begin
         while (PathIdx <= Length(APath)) and (APath[PathIdx] <> '/') do
           Inc(PathIdx);
       end;
-
+      
       ValueLen := PathIdx - ValueStart;
       if ValueLen = 0 then
         Exit(False);
-
+        
       AParams.Add(Seg.Text, Copy(APath, ValueStart, ValueLen));
     end;
   end;
-
+  
   if PathIdx <= Length(APath) then
     Exit(False);
-
+    
   Result := True;
 end;
 
@@ -244,7 +244,7 @@ begin
   FMethod := AMethod;
   FPath := APath;
   FHandler := AHandler;
-
+  
   if APath.Contains('{') then
     FPattern := TRoutePattern.Create(APath)
   else
@@ -273,7 +273,7 @@ var
 begin
   inherited Create;
   FRoutes := TCollections.CreateList<TRouteDefinition>(True); // Owns objects
-
+  
   // Clone routes to ensure thread safety and independence
   for Route in ARoutes do
   begin
@@ -309,25 +309,25 @@ begin
   // Or match typically V1?
   // Policy: If route has NO versions defined, it matches any request (implicit neutral).
   // If route HAS versions, request MUST match one of them.
-
+  
   if Length(SupportedVersions) = 0 then
     Exit(True); // Route is version neutral
-
+    
   if RequestedVersion = '' then
   begin
     // If no version requested, do we match versioned routes?
     // Maybe default to '1.0' or reject?
-    // For now: assume neutral match only if requested matches.
+    // For now: assume neutral match only if requested matches. 
     // If requested is empty, we only match neutral routes (Length=0 check matches).
     // What if we want default version?
     // Let's assume empty request only matches neutral routes.
-    Exit(False);
+    Exit(False); 
   end;
-
+    
   for V in SupportedVersions do
     if SameText(V, RequestedVersion) then
       Exit(True);
-
+      
   Result := False;
 end;
 
@@ -346,11 +346,11 @@ begin
   Method := AContext.Request.Method;
   Path := AContext.Request.Path;
   RequestVersion := GetRequestedApiVersion(AContext);
-
+  
   // Normalize path: remove trailing slash (except for root "/")
   if (Length(Path) > 1) and (Path[Length(Path)] = '/') then
     Path := Copy(Path, 1, Length(Path) - 1);
-
+  
   // Separate into literal and pattern candidates
   // RULE: Literal routes (exact match) take priority over pattern routes (with {params})
   LiteralCandidates := TCollections.CreateList<TRouteDefinition>;
@@ -364,18 +364,18 @@ begin
                LiteralCandidates.Add(Route)
               else if (Route.Pattern <> nil) and Route.Pattern.Match(Path, ARouteParams) then
              begin
-               // Route matches with pattern. Clean up the params if we decide to keep searching.
+               // Route matches with pattern. Clean up the params if we decide to keep searching. 
                // Actually we keep looking. But PatternCandidates keeps the route.
                ARouteParams.Clear;
                PatternCandidates.Add(Route);
              end;
         end;
     end;
-
+    
     // Select Best Candidate based on Version
     // Priority: Literal routes first, then pattern routes
     BestMatch := nil;
-
+    
     // 1. Try literal candidates first
     for Route in LiteralCandidates do
     begin
@@ -385,7 +385,7 @@ begin
         Break;
       end;
     end;
-
+    
     // 2. If no literal match, try pattern candidates
     if BestMatch = nil then
     begin
@@ -398,7 +398,7 @@ begin
         end;
       end;
     end;
-
+    
     // 3. If still no match and RequestVersion is empty, try neutral routes (literal first)
     if (BestMatch = nil) and (RequestVersion = '') then
     begin
@@ -408,7 +408,7 @@ begin
           BestMatch := Route;
           Break;
         end;
-
+      
       if BestMatch = nil then
         for Route in PatternCandidates do
           if Length(Route.Metadata.ApiVersions) = 0 then
@@ -417,19 +417,19 @@ begin
             Break;
           end;
     end;
-
+    
     if BestMatch <> nil then
     begin
         AHandler := BestMatch.Handler;
         AMetadata := BestMatch.Metadata;
-
+        
         // Re-generate params for the winner
         if BestMatch.Pattern <> nil then
            BestMatch.Pattern.Match(Path, ARouteParams);
-
+           
         Result := True;
     end;
-
+    
   finally
     LiteralCandidates := nil;
     PatternCandidates := nil;
@@ -437,4 +437,3 @@ begin
 end;
 
 end.
-

@@ -167,7 +167,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-
+    
     function GetItem(const AKey: string): string;
     function TryGetValue(const AKey: string; out AValue: string): Boolean;
     function ContainsKey(const AKey: string): Boolean;
@@ -187,7 +187,7 @@ implementation
 constructor TDextStringDictionary.Create;
 begin
   inherited Create;
-  FData := TDictionary<string, string>.Create(False, 0);
+  FData := TDictionary<string, string>.Create(False, 0); 
 end;
 
 destructor TDextStringDictionary.Destroy;

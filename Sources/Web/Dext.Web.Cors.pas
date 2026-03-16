@@ -43,27 +43,27 @@ type
     ///   List of allowed origins. Use '*' for any origin.
     /// </summary>
     AllowedOrigins: TArray<string>;
-
+    
     /// <summary>
     ///   List of allowed HTTP methods (GET, POST, PUT, DELETE, etc.).
     /// </summary>
     AllowedMethods: TArray<string>;
-
+    
     /// <summary>
     ///   List of allowed request headers.
     /// </summary>
     AllowedHeaders: TArray<string>;
-
+    
     /// <summary>
     ///   List of headers that can be exposed to the browser.
     /// </summary>
     ExposedHeaders: TArray<string>;
-
+    
     /// <summary>
     ///   Whether to allow credentials (cookies, authorization headers).
     /// </summary>
     AllowCredentials: Boolean;
-
+    
     /// <summary>
     ///   How long (in seconds) the preflight response can be cached.
     /// </summary>
@@ -115,52 +115,52 @@ type
     ///   Creates a new CORS builder with default options.
     /// </summary>
     class function Create: TCorsBuilder; static;
-
+    
     // =====================================================================
     // New API (without 'With' prefix)
     // =====================================================================
-
+    
     /// <summary>
     ///   Specifies the allowed origins.
     /// </summary>
     function Origins(const AOrigins: TArray<string>): TCorsBuilder;
-
+    
     /// <summary>
     ///   Allows any origin (*). Cannot be used with AllowCredentials.
     /// </summary>
     function AllowAnyOrigin: TCorsBuilder;
-
+    
     /// <summary>
     ///   Specifies the allowed HTTP methods.
     /// </summary>
     function Methods(const AMethods: TArray<string>): TCorsBuilder;
-
+    
     /// <summary>
     ///   Allows any HTTP method.
     /// </summary>
     function AllowAnyMethod: TCorsBuilder;
-
+    
     /// <summary>
     ///   Specifies the allowed request headers.
     /// </summary>
     function Headers(const AHeaders: TArray<string>): TCorsBuilder;
-
+    
     /// <summary>
     ///   Allows any request header.
     /// </summary>
     function AllowAnyHeader: TCorsBuilder;
-
+    
     /// <summary>
     ///   Specifies headers that can be exposed to the browser.
     /// </summary>
     function ExposedHeaders(const AHeaders: TArray<string>): TCorsBuilder;
-
+    
     /// <summary>
     ///   Allows credentials (cookies, authorization headers).
     ///   Cannot be used with AllowAnyOrigin.
     /// </summary>
     function AllowCredentials: TCorsBuilder;
-
+    
     /// <summary>
     ///   Sets how long (in seconds) the preflight response can be cached.
     /// </summary>
@@ -169,7 +169,7 @@ type
     // =====================================================================
     // Deprecated API (with 'With' prefix) - for backward compatibility
     // =====================================================================
-
+    
     function WithOrigins(const AOrigins: TArray<string>): TCorsBuilder; deprecated 'Use Origins instead';
     function WithMethods(const AMethods: TArray<string>): TCorsBuilder; deprecated 'Use Methods instead';
     function WithHeaders(const AHeaders: TArray<string>): TCorsBuilder; deprecated 'Use Headers instead';
@@ -180,7 +180,7 @@ type
     ///   Returns the built CORS options.
     /// </summary>
     function Build: TCorsOptions;
-
+    
     /// <summary>
     ///   Implicit conversion to TCorsOptions for direct use in UseCors.
     /// </summary>
@@ -196,17 +196,17 @@ type
     ///   Adds CORS middleware with default settings.
     /// </summary>
     class function UseCors(const ABuilder: IApplicationBuilder): IApplicationBuilder; overload; static;
-
+    
     /// <summary>
     ///   Adds CORS middleware with custom options.
     /// </summary>
     class function UseCors(const ABuilder: IApplicationBuilder; const AOptions: TCorsOptions): IApplicationBuilder; overload; static;
-
+    
     /// <summary>
     ///   Adds CORS middleware configured with a builder callback.
     /// </summary>
     class function UseCors(const ABuilder: IApplicationBuilder; AConfigurator: TProc<TCorsBuilder>): IApplicationBuilder; overload; static;
-
+    
     /// <summary>
     ///   Adds CORS middleware with a fluent builder.
     ///   Usage: UseCors(TCorsBuilder.Create.AllowAnyOrigin.AllowAnyMethod)
@@ -546,4 +546,3 @@ begin
 end;
 
 end.
-

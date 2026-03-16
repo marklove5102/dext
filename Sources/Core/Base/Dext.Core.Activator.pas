@@ -576,6 +576,7 @@ begin
         
         // Create implementation name from interface name (e.g., IList<T> -> TList<T>)
         var ImplName := TypeName.Replace('IList<', 'TList<').Replace('IEnumerable<', 'TList<');
+        
         ImplRtti := Context.FindType(ImplName);
         if ImplRtti = nil then
           ImplRtti := Context.FindType('Dext.Collections.' + ImplName);
@@ -660,10 +661,10 @@ begin
                if Assigned(AddM) and (Length(AddM.GetParameters) = 2) then
                  if (AddM.GetParameters[0].ParamType.Handle = KeyType) and 
                     (AddM.GetParameters[1].ParamType.Handle = ValueType) then
-                 begin
-                   ImplRtti := TmpType;
-                   Break;
-                 end;
+                  begin
+                    ImplRtti := TmpType;
+                    Break;
+                  end;
             end;
 
           if (ImplRtti <> nil) and (ImplRtti is TRttiInstanceType) then
@@ -689,10 +690,12 @@ begin
               begin
                 var Intf: IInterface;
                 if Instance.AsObject.GetInterface(TRttiInterfaceType(RttiType).GUID, Intf) then
-                  TValue.Make(@Intf, AType, Result)
-                else Result := Instance;
+                  Result := TValue.From<IInterface>(Intf)
+                else 
+                  Result := Instance;
               end
-              else Result := Instance;
+              else 
+                Result := Instance;
               Exit;
             end;
           end;

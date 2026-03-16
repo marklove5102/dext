@@ -162,7 +162,7 @@ uses
 class constructor TValueConverterRegistry.Create;
 begin
   FLock := System.SyncObjs.TCriticalSection.Create;
-  FConverters := TCollections.CreateDictionary<string, IValueConverter>;
+  FConverters := TCollections.CreateDictionary<string, IValueConverter>(False);
   
   // Register Default Converters
   

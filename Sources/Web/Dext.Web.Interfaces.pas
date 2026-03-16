@@ -208,7 +208,7 @@ type
     function UseMiddleware(AMiddleware: TClass; const AParam: TValue): IApplicationBuilder; overload;
     function UseMiddleware(AMiddleware: TClass; const AParams: array of TValue): IApplicationBuilder; overload;
     function UseMiddleware(AMiddleware: IMiddleware): IApplicationBuilder; overload; // ? Singleton Middleware
-
+    
     // ? Functional Middleware
     function Use(AMiddleware: TMiddlewareDelegate): IApplicationBuilder;
 
@@ -221,11 +221,11 @@ type
     function MapPut(const Path: string; Handler: TStaticHandler): IApplicationBuilder;
     function MapDelete(const Path: string; Handler: TStaticHandler): IApplicationBuilder;
     function Build: TRequestDelegate;
-
+    
     function GetRoutes: TArray<TEndpointMetadata>; // ? Introspection
     procedure UpdateLastRouteMetadata(const AMetadata: TEndpointMetadata); // ? For fluent API
     procedure SetServiceProvider(const AProvider: IServiceProvider); // ? Update Provider before Build
-
+    
     /// <summary>
     ///   Registers an object to be disposed when the host shuts down.
     ///   Use for objects that should live for the lifetime of the application.
