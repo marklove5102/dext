@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -291,14 +291,14 @@ end;
 
 function TRouteMatcher.GetRequestedApiVersion(const AContext: IHttpContext): string;
 begin
-  // Simple default logic: check Query string then Header
-  // NOTE: In production this should be pluggable via DI
-  if not AContext.Request.Query.TryGetValue('api-version', Result) then
-    Result := '';
-  begin
-    if not AContext.Request.Headers.TryGetValue('X-Version', Result) then
-      Result := '';
-  end;
+  // First check Query string, then Header
+  if AContext.Request.Query.TryGetValue('api-version', Result) then
+    Exit;
+    
+  if AContext.Request.Headers.TryGetValue('X-Version', Result) then
+    Exit;
+    
+  Result := '';
 end;
 
 function TRouteMatcher.IsVersionMatch(const RequestedVersion: string; const SupportedVersions: TArray<string>): Boolean;

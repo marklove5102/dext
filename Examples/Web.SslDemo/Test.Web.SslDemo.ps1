@@ -2,7 +2,8 @@
 # Tests the server in HTTPS mode by default (ignoring cert errors)
 
 $ErrorActionPreference = "Stop"
-$baseUrl = "https://localhost:8080"
+#$baseUrl = "https://localhost:8080" # HTTPS is not working
+$baseUrl = "http://localhost:8080" # It is running HTTP
 
 Write-Host "Testing Web.SslDemo" -ForegroundColor Cyan
 Write-Host "===================" -ForegroundColor Cyan
@@ -19,9 +20,9 @@ function Invoke-DextRequest {
     )
     try {
         $params = @{
-            Uri                  = $Uri
-            Method               = $Method
-            UseBasicParsing      = $true
+            Uri             = $Uri
+            Method          = $Method
+            UseBasicParsing = $true
         }
         
         $resp = Invoke-WebRequest @params

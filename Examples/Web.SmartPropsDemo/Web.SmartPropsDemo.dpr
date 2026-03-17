@@ -145,6 +145,7 @@ begin
     WriteLn('');
     
     App.Run(5000);
+
   except
     on E: Exception do
       WriteLn(E.ClassName, ': ', E.Message);
