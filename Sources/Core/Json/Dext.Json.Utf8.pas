@@ -157,6 +157,7 @@ type
   end;
 
 function EscapeJsonString(const S: string): string;
+function UnescapeJsonString(const S: string): string;
 function GetJsonVal(const AVal: TValue): string; overload;
 function GetJsonVal(const AVal: TValue; const ASettings: TJsonSettings): string; overload;
 
@@ -191,6 +192,51 @@ begin
       else
         Result := Result + c;
     end;
+  end;
+end;
+
+function UnescapeJsonString(const S: string): string;
+var
+  i: Integer;
+  c: Char;
+  IsEscaped: Boolean;
+begin
+  if Pos('\', S) = 0 then
+    Exit(S);
+
+  Result := '';
+  IsEscaped := False;
+  i := 1;
+  while i <= Length(S) do
+  begin
+    c := S[i];
+    if IsEscaped then
+    begin
+      case c of
+        '"': Result := Result + '"';
+        '\': Result := Result + '\';
+        '/': Result := Result + '/';
+        'b': Result := Result + #8;
+        't': Result := Result + #9;
+        'n': Result := Result + #10;
+        'f': Result := Result + #12;
+        'r': Result := Result + #13;
+        'u':
+          begin
+            if i + 4 <= Length(S) then
+            begin
+              Result := Result + Char(StrToInt('$' + Copy(S, i + 1, 4)));
+              Inc(i, 4);
+            end;
+          end;
+      end;
+      IsEscaped := False;
+    end
+    else if c = '\' then
+      IsEscaped := True
+    else
+      Result := Result + c;
+    Inc(i);
   end;
 end;
 
@@ -511,13 +557,8 @@ end;
 
 function TUtf8JsonReader.GetString: string;
 begin
-  // If span has escapes (\n, \", \uXXXX), we need to unescape.
-  // For v1, let's assume raw string first, implement unescape utility later or if needed.
-  // Actually, standard JSON usually requires unescaping.
-  // We can use a helper or TEncoding.
-  
-  // Basic UTF8 decoding (doesn't handle JSON escapes like \u0000)
-  Result := FValueSpan.ToString;
+  // Handle JSON escapes (\n, \", \uXXXX, etc.)
+  Result := UnescapeJsonString(FValueSpan.ToString);
 end;
 
 function TUtf8JsonReader.GetInt32: Integer;
@@ -716,8 +757,11 @@ begin
       end;
     tkRecord, tkMRecord:
       begin
+        CheckComma;
         // For normal records that are not SmartProps, use the default serializer
         WriteRaw(TDextJson.Serialize(AValue));
+        if FDepth > 0 then
+          FNeedComma[FDepth - 1] := True;
       end;
   else
     WriteString(AValue.ToString);

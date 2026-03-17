@@ -77,7 +77,8 @@ end;
 
 function TQueryStringApiVersionReader.Read(const Context: IHttpContext): string;
 begin
-  Result := Context.Request.Query.Values[FParameterName];
+  if not Context.Request.Query.TryGetValue(FParameterName, Result) then
+    Result := '';
 end;
 
 { THeaderApiVersionReader }
@@ -117,4 +118,3 @@ begin
 end;
 
 end.
-

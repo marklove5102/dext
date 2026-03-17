@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -138,21 +138,71 @@ begin
                Continue;
 
             var Attributes := Method.GetAttributes;
+            var VerbAttrs: TArray<RouteAttribute>;
+            var PathAttrs: TArray<RouteAttribute>;
+            var VCount := 0;
+            var PCount := 0;
+            var J, K: Integer;
 
-            // ✅ FIX: Process EACH route attribute to support multiple routes per method
+            SetLength(VerbAttrs, Length(Attributes));
+            SetLength(PathAttrs, Length(Attributes));
+
+            // ✅ Separar Atributos sem alocação de objetos dinâmica (TCollections.CreateList)
             for Attr in Attributes do
             begin
               if Attr is RouteAttribute then
               begin
                 var R := RouteAttribute(Attr);
-                
-                MethodInfo.Method := Method;
-                MethodInfo.Path := R.Path;
-                MethodInfo.HttpMethod := R.Method;
-                MethodInfo.RouteAttribute := R;
-                
-                MethodsList.Add(MethodInfo);
-                HasRouteMethods := True;
+                if R.Method <> '' then
+                begin
+                  VerbAttrs[VCount] := R;
+                  Inc(VCount);
+                end
+                else
+                begin
+                  PathAttrs[PCount] := R;
+                  Inc(PCount);
+                end;
+              end;
+            end;
+
+            var Combined := False;
+
+            // ✅ COMBINAR: HttpGet (Verbo sem Path) + Route('/... available') (Path sem Verbo)
+            for J := 0 to VCount - 1 do
+            begin
+              var V := VerbAttrs[J];
+              for K := 0 to PCount - 1 do
+              begin
+                var P := PathAttrs[K];
+                if (V.Path = '') and (P.Method = '') then
+                begin
+                  MethodInfo.Method := Method;
+                  MethodInfo.Path := P.Path;
+                  MethodInfo.HttpMethod := V.Method;
+                  MethodInfo.RouteAttribute := V; // ou P
+                  MethodsList.Add(MethodInfo);
+                  HasRouteMethods := True;
+                  Combined := True;
+                end;
+              end;
+            end;
+
+            // ✅ Se não combinou nada (ex: rotas independentes), adiciona individualmente
+            if not Combined then
+            begin
+              for Attr in Attributes do
+              begin
+                if Attr is RouteAttribute then
+                begin
+                  var R := RouteAttribute(Attr);
+                  MethodInfo.Method := Method;
+                  MethodInfo.Path := R.Path;
+                  MethodInfo.HttpMethod := R.Method;
+                  MethodInfo.RouteAttribute := R;
+                  MethodsList.Add(MethodInfo);
+                  HasRouteMethods := True;
+                end;
               end;
             end;
           end;
@@ -634,7 +684,3 @@ begin
 end;
 
 end.
-
-
-
-

@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -523,7 +523,7 @@ end;
 function TDataApiHandler<T>.HandleGetList(const Context: IHttpContext): IResult;
 var
   DbCtx: TDbContext;
-  Query: TStrings;
+  Query: IStringDictionary;
   i: Integer;
   ParamName, ParamValue: string;
   FilterExpr: IExpression;
@@ -539,6 +539,7 @@ var
   AuthResult: IResult;
   Map: TEntityMap;
   PropMap: TPropertyMap;
+  Qry: TFluentQuery<T>;
 begin
   // Authorization check
   AuthResult := CheckAuthorization(Context, False);  // Read operation
@@ -556,15 +557,19 @@ begin
     
     OrderList := TCollections.CreateList<IOrderBy>;
     try
+      var Properties: TArray<TRttiProperty>;
       Ctx := TRttiContext.Create;
       try
         Typ := Ctx.GetType(TypeInfo(T));
+        if Typ = nil then Exit(Results.BadRequest('Entity type not found in RTTI'));
+        Properties := Typ.GetProperties;
         Map := TModelBuilder.Instance.GetMap(TypeInfo(T));
         
-        for i := 0 to Query.Count - 1 do
+        var QueryArray := Query.ToArray;
+        for i := 0 to High(QueryArray) do
         begin
-          ParamName := Query.Names[i];
-          ParamValue := Query.ValueFromIndex[i];
+          ParamName := QueryArray[i].Key;
+          ParamValue := QueryArray[i].Value;
           
           if ParamName = '' then Continue;
 
@@ -625,7 +630,7 @@ begin
 
           // Find matching property (case insensitive)
           Prop := nil;
-          for var P in Typ.GetProperties do
+          for var P in Properties do
             if SameText(P.Name, ActualPropName) then
             begin
               Prop := P;
@@ -644,95 +649,102 @@ begin
           var AdjustedValue := ParamValue;
           if BinaryOp = boLike then
           begin
-               var Suffix := ParamName.Substring(UnderscorePos + 1).ToLower;
-               if Suffix = 'sw' then AdjustedValue := ParamValue + '%'
-               else if Suffix = 'ew' then AdjustedValue := '%' + ParamValue
-               else AdjustedValue := '%' + ParamValue + '%';
+            var Suffix := ParamName.Substring(UnderscorePos + 1).ToLower;
+            if Suffix = 'sw' then AdjustedValue := ParamValue + '%'
+            else if Suffix = 'ew' then AdjustedValue := '%' + ParamValue
+            else AdjustedValue := '%' + ParamValue + '%';
           end;
 
           // Create expression
           if BinaryOp = boIn then
           begin
-              var InValues := ParamValue.Split([',']);
-              NewExpr := TBinaryExpression.Create(Prop.Name, boIn, TValue.From<TArray<string>>(InValues));
+            var InValues := ParamValue.Split([',']);
+            NewExpr := TBinaryExpression.Create(Prop.Name, boIn, TValue.From<TArray<string>>(InValues));
           end
           else
           begin
               case PropType.TypeKind of
                 tkInteger, tkInt64:
                   if TryStrToInt(ParamValue, IntVal) then
-                    NewExpr := TBinaryExpression.Create(Prop.Name, BinaryOp, TValue.From<Integer>(IntVal))
+                  begin
+                     NewExpr := TBinaryExpression.Create(Prop.Name, BinaryOp, IntVal)
+                  end
                   else Continue;
                 tkEnumeration:
                   if PropType.Handle = TypeInfo(Boolean) then
                   begin
                     BoolVal := SameText(ParamValue, 'true') or (ParamValue = '1');
-                    NewExpr := TBinaryExpression.Create(Prop.Name, BinaryOp, TValue.From<Boolean>(BoolVal));
+                     NewExpr := TBinaryExpression.Create(Prop.Name, BinaryOp, BoolVal);
                   end else Continue;
                 tkString, tkUString, tkWString, tkLString:
-                  NewExpr := TBinaryExpression.Create(Prop.Name, BinaryOp, TValue.From<string>(AdjustedValue));
+                   NewExpr := TBinaryExpression.Create(Prop.Name, BinaryOp, AdjustedValue);
               else Continue;
               end;
           end;
           
-          if FilterExpr = nil then FilterExpr := NewExpr
-          else FilterExpr := TLogicalExpression.Create(FilterExpr, NewExpr, loAnd);
+          if FilterExpr = nil then
+            FilterExpr := NewExpr
+          else
+            FilterExpr := TLogicalExpression.Create(FilterExpr, NewExpr, loAnd);
         end;
       finally
         Ctx.Free;
       end;
       
-       var Qry: TFluentQuery<T>;
-       if not FOptions.Sql.IsEmpty then
-         Qry := DbCtx.Entities<T>.FromSql(FOptions.Sql)
-       else
-         Qry := DbCtx.Entities<T>.QueryAll;
+      if FOptions.Sql <> '' then
+        Qry := DbCtx.Entities<T>.FromSql(FOptions.Sql)
+      else
+        Qry := DbCtx.Entities<T>.QueryAll;
 
-       Qry := Qry.AsNoTracking;
+      if FilterExpr <> nil then
+        Qry := Qry.Where(FilterExpr);
 
-       if FilterExpr <> nil then
-         Qry := Qry.Where(FilterExpr);
+      // Use AsNoTracking for DataApi to avoid memory leaks and context overhead.
+      Qry := Qry.AsNoTracking;
 
-       for var OrderItem in OrderList do
-         Qry := Qry.OrderBy(OrderItem);
+      for var OrderItem in OrderList do
+        Qry := Qry.OrderBy(OrderItem);
 
-       if Offset > 0 then Qry := Qry.Skip(Offset);
-       if Limit > 0 then Qry := Qry.Take(Limit);
+      if Offset > 0 then Qry := Qry.Skip(Offset);
+      if Limit > 0 then Qry := Qry.Take(Limit);
 
-        var FinalItems := Qry.ToList;
+      var FinalItems := Qry.ToList;
+      try
+        // Build JSON response with high-performance UTF8 writer
+        var Stream := TMemoryStream.Create;
         try
-          // Build JSON response with high-performance UTF8 writer
-          var Stream := TMemoryStream.Create;
-          try
-            var FinalSettings := TDextJson.GetDefaultSettings;
-            if FOptions.NamingStrategy <> TCaseStyle.CaseInherit then
-              FinalSettings.CaseStyle := FOptions.NamingStrategy;
-            if FOptions.EnumStyle <> TEnumStyle.EnumInherit then
-              FinalSettings.EnumStyle := FOptions.EnumStyle;
+          var FinalSettings := TDextJson.GetDefaultSettings;
+          if FOptions.NamingStrategy <> TCaseStyle.CaseInherit then
+            FinalSettings.CaseStyle := FOptions.NamingStrategy;
+          if FOptions.EnumStyle <> TEnumStyle.EnumInherit then
+            FinalSettings.EnumStyle := FOptions.EnumStyle;
 
-            var Writer := TUtf8JsonWriter.Create(Stream, False);
-            Writer.Settings := FinalSettings;
-            Writer.WriteStartArray;
-            for var Item in FinalItems do
-            begin
-              Writer.WriteValue(TValue.From<T>(Item));
-            end;
-            Writer.WriteEndArray;
-
-            Stream.Position := 0;
-            Result := Results.Stream(Stream, 'application/json');
-          except
-            Stream.Free;
-            raise;
+          var Writer := TUtf8JsonWriter.Create(Stream, False);
+          Writer.Settings := FinalSettings;
+          Writer.WriteStartArray;
+          for var Item in FinalItems do
+          begin
+            Writer.WriteValue(TValue.From<T>(Item));
           end;
-        finally
-          // Items will be freed automatically if the list returned by ToList owns them (AsNoTracking)
+          Writer.WriteEndArray;
+
+          Stream.Position := 0;
+          Result := Results.Stream(Stream, 'application/json');
+        except
+          Stream.Free;
+          raise;
         end;
-     finally
-       OrderList := nil;
-       if FilterExpr <> nil then
-         FilterExpr := nil; // IExpression is an interface, will be released
-     end;
+      finally
+        FinalItems := nil;
+      end;
+    finally
+      OrderList := nil;
+      FilterExpr := nil;
+      NewExpr := nil;
+      AuthResult := nil;
+      Query := nil;
+      Qry := Default(TFluentQuery<T>);
+    end;
   except
     on E: Exception do
       Result := Results.StatusCode(500, Format('{"error":"[%s] %s"}', [E.ClassName, EscapeJsonString(E.Message)]));
@@ -1050,4 +1062,3 @@ begin
 end;
 
 end.
-

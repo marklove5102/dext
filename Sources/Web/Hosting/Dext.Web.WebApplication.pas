@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -96,7 +96,8 @@ uses
   Dext.Hosting.AppState
   {$IFDEF DEXT_ENABLE_ENTITY},
   Dext.Entity.Core,
-  Dext.Entity.Migrations.Runner
+  Dext.Entity.Migrations.Runner,
+  Dext.Entity.Drivers.FireDAC.Manager
   {$ENDIF};
 
 { TWebApplication }
@@ -427,6 +428,11 @@ begin
     
   // Explicitly release provider reference to ensure cleanup
   FServiceProvider := nil;
+
+  {$IFDEF DEXT_ENABLE_ENTITY}
+  // 🏁 Finalize custom FireDAC Manager to drop pools before app shutdown audit
+  TDextFireDACManager.Finalize;
+  {$ENDIF}
 
   // ✅ Break circular references by niling interfaces that might be captured in closures
   FServices := nil;

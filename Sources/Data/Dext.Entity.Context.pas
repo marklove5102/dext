@@ -428,6 +428,9 @@ begin
   if FChangeTracker <> nil then
     FChangeTracker.Clear;
     
+  if FConnection <> nil then
+    FConnection.Disconnect;
+    
   FProxies := nil;
   FCache := nil;
   if FOwnsModelBuilder then

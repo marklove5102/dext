@@ -1,4 +1,4 @@
-﻿unit TicketSales.Controllers;
+unit TicketSales.Controllers;
 
 {***************************************************************************}
 {                                                                           }

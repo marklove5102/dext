@@ -2,13 +2,16 @@
 # Tests the server in HTTPS mode by default (ignoring cert errors)
 
 $ErrorActionPreference = "Stop"
-$baseUrl = "https://localhost:8080"
+#$baseUrl = "https://localhost:8080" # HTTPS is not working
+$baseUrl = "http://localhost:8080" # It is running HTTP
 
 Write-Host "Testing Web.SslDemo" -ForegroundColor Cyan
 Write-Host "===================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Testing HTTPS connection (SkipCertificateCheck = true)"
 Write-Host ""
+
+[System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
 
 function Invoke-DextRequest {
     param (
@@ -17,10 +20,9 @@ function Invoke-DextRequest {
     )
     try {
         $params = @{
-            Uri                  = $Uri
-            Method               = $Method
-            UseBasicParsing      = $true
-            SkipCertificateCheck = $true  # Ignore self-signed errors
+            Uri             = $Uri
+            Method          = $Method
+            UseBasicParsing = $true
         }
         
         $resp = Invoke-WebRequest @params

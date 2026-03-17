@@ -254,6 +254,7 @@ type
     class function CreateStack<T>: IStack<T>; static;
     class function CreateQueue<T>: IQueue<T>; static;
     class function CreateHashSet<T>: IHashSet<T>; static;
+    class function CreateStringDictionary: IStringDictionary; static;
   end;
   {$M-}
 
@@ -601,20 +602,22 @@ begin
     end;
   end;
 
-  if FOwnsObjects and FIsClass then
-    Notify(Self, GetItem(Index), cnRemoved);
   FCore.DeleteRaw(Index);
 end;
 
 procedure TList<T>.Clear;
 var
-  I: Integer;
+  I, LCount: Integer;
 begin
+  LCount := FCore.Count;
+  if LCount = 0 then Exit;
+
   if FOwnsObjects and FIsClass then
   begin
-    for I := FCore.Count - 1 downto 0 do
+    for I := 0 to LCount - 1 do
       Notify(Self, GetItem(I), cnRemoved);
   end;
+
   FCore.Clear;
 end;
 
@@ -890,6 +893,11 @@ end;
 class function TCollections.CreateHashSet<T>: IHashSet<T>;
 begin
   Result := THashSet<T>.Create;
+end;
+
+class function TCollections.CreateStringDictionary: IStringDictionary;
+begin
+  Result := TDextStringDictionary.Create;
 end;
 
 end.
