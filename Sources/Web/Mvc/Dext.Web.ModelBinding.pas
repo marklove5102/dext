@@ -29,16 +29,17 @@ interface
 
 uses
   System.Classes,
+  System.Rtti,
   System.SysUtils,
+  System.TypInfo,
   Dext.Collections,
   Dext.Collections.Dict,
-  System.Rtti,
-  System.TypInfo,
-  Dext.Types.UUID,
   Dext.DI.Interfaces,
-  Dext.Web.Interfaces,
   Dext.Json,
-  Dext.Json.Types;
+  Dext.Json.Types,
+  Dext.Types.UUID,
+  Dext.Web.Interfaces,
+  Dext.Utils;
 
 type
   EBindingException = class(Exception);

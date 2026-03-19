@@ -728,6 +728,7 @@ begin
   FDataSet.FieldByName('Name').AsString := 'Romero';
   FDataSet.Post;
 
+  FDataSet.Last;
   Should(FDataSet.RecordCount).Be(2);
   Should(FDataSet.FieldByName('Id').AsInteger).Be(3);
 

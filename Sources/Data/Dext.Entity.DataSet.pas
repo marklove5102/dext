@@ -1,4 +1,4 @@
-﻿unit Dext.Entity.DataSet;
+unit Dext.Entity.DataSet;
 
 interface
 
@@ -40,9 +40,10 @@ type
     FEntityClass: TClass;
     
     // Virtual Buffers (Offsets Index)
-    FItems: IList<TObject>;            // Referência real para a lista de objetos
-    FOwnsItems: Boolean;               // Se o dataset é dono da lista e deve limpá-la
-    FVirtualIndex: TVector<Integer>;   // Ordered/filtered view over FItems (contém índices para FItems)
+    // Physical Objects Reference
+    FItems: IList<TObject>;            // Real reference to the object list
+    FOwnsItems: Boolean;               // Whether the dataset owns the list and should clear it
+    FVirtualIndex: TVector<Integer>;   // Ordered/filtered view over FItems (contains indices to FItems)
     
     FRecordSize: Integer;
     FHeaderSize: Integer;
@@ -51,7 +52,7 @@ type
     FReadOnly: Boolean;
     FIncludeShadowProperties: Boolean;
     FIndexFieldNames: string;
-    FCurrentRec: Integer; // Controle de cursor nativo do dataset
+    FCurrentRec: Integer; // Dataset native cursor control
     FIsCursorOpen: Boolean;
     FInsertObj: TObject; // Temporary object for uncommitted dsInsert
     FIsAppending: Boolean;
@@ -71,14 +72,14 @@ type
     /// </summary>
     function ReadFieldValue(Field: TField; out Value: Variant): Boolean;
   protected
-    // Overrides do TDataSet para filtros e ordenação
+    // TDataSet overrides for filtering and sorting
     procedure InternalHandleException; override;
     function IsCursorOpen: Boolean; override;
     function GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode; DoSearch: Boolean): TGetResult; override;
     procedure SetFiltered(Value: Boolean); override;
     procedure SetFilterText(const Value: string); override;
     
-    // Overrides obrigatórios do TDataSet
+    // Mandatory TDataSet overrides
     procedure InternalOpen; override;
     procedure InternalClose; override;
     procedure InternalInitFieldDefs; override;
@@ -88,7 +89,7 @@ type
     procedure FreeRecordBuffer(var Buffer: TRecordBuffer); override;
     procedure InternalInitRecord(Buffer: TRecordBuffer); override;
     
-    // Bookmark e Navegação
+    // Bookmark and Navigation
     procedure GetBookmarkData(Buffer: TRecordBuffer; Data: Pointer); override;
     procedure SetBookmarkData(Buffer: TRecordBuffer; Data: Pointer); override;
     function GetBookmarkFlag(Buffer: TRecordBuffer): TBookmarkFlag; override;
@@ -101,7 +102,7 @@ type
     function GetRecNo: Integer; override;
     procedure SetRecNo(Value: Integer); override;
 
-    // DML e Edição
+    // DML and Editing
     procedure SetFieldData(Field: TField; Buffer: TValueBuffer); override;
     procedure InternalAddRecord(Buffer: TRecordBuffer; Append: Boolean); override;
     procedure InternalDelete; override;
@@ -131,14 +132,14 @@ type
     function Locate(const KeyFields: string; const KeyValues: Variant; Options: TLocateOptions = []): Boolean; override;
     function BookmarkValid(Bookmark: TBookmark): Boolean; override;
     /// <summary>
-    ///  Carga de dados de Objetos
+    ///  Object data loading
     /// </summary>
     procedure Load(const AItems: IList<TObject>; AClass: TClass; AOwns: Boolean = False); overload;
 
     procedure Load(const AItems: TArray<TObject>; AClass: TClass); overload;
     
     /// <summary>
-    ///  Carga de dados de JSON Utf8 (Zero-Alloc Pipeline)
+    ///  UTF-8 JSON data loading (Zero-Alloc Pipeline)
     /// </summary>
     procedure LoadFromUtf8Json(const ASpan: TByteSpan; AClass: TClass);
 
@@ -670,8 +671,8 @@ begin
       FCurrentRec := TargetIdx
     else
       FCurrentRec := FVirtualIndex.Count;
-    // NOTA: NÃO chamamos Resync([]); aqui. O TDataSet base já gerencia esse evento
-    // logo após o InternalDelete, garantindo que o cursor pare no registro correto.
+    // NOTE: We do NOT call Resync([]); here. The base TDataSet manages this event
+    // immediately after InternalDelete, ensuring the cursor lands on the correct record.
   end;
 end;
 
@@ -685,16 +686,15 @@ begin
   begin
     if Assigned(FInsertObj) then
     begin
-      // 1. Decidir se adiciona ao final (Append) ou insere na posição (Insert)
+      // 1. Decide between Add (Append) or Insert at position (Insert)
       if FIsAppending then
       begin
         FItems.Add(FInsertObj);
-        NewIdx := FItems.Count - 1;
+        NewIdx := FItems.Count -1;
       end
       else
       begin
-        // Se FPositionBeforeAction veio do RecNo (1-based), ajustamos para 0-based
-        // Se RecNo era 0 (vazio), TargetPos fica -1. Se era 1, TargetPos fica 0.
+        // Adjust 1-based RecNo to 0-based index
         TargetPos := FPositionBeforeAction - 1;
 
         if (TargetPos < 0) or (FVirtualIndex.Count = 0) then
@@ -702,7 +702,7 @@ begin
         else if (TargetPos >= FVirtualIndex.Count) then
           TargetIdx := FItems.Count
         else
-          // No Insert, usamos o índice físico apontado pela visão virtual na posição guardada no DoBeforeInsert
+          // In Insert mode, use the physical index pointed by the virtual view at the position stored in DoBeforeInsert
           TargetIdx := FVirtualIndex[TargetPos];
 
         if TargetIdx >= FItems.Count then
@@ -721,10 +721,10 @@ begin
       FIsAppending := False; 
       FPositionBeforeAction := -2;
 
-      // 2. Atualizar a visão virtual
+      // 2. Update Virtual View
       ApplyFilterAndSort;
 
-      // 3. Posicionar o cursor no novo item
+      // 3. Position cursor on the new item
       FCurrentRec := FVirtualIndex.IndexOf(NewIdx);
 
       // 4. Notificar mudança
@@ -733,8 +733,6 @@ begin
   end
   else if State = dsEdit then
   begin
-    // Na edição, o objeto já foi alterado diretamente. 
-    // Apenas reaplicamos filtros/sort caso o valor alterado afete a ordem/visibilidade.
     ApplyFilterAndSort;
   end;
 end;
@@ -777,9 +775,7 @@ end;
 
 procedure TEntityDataSet.InternalInsert;
 begin
-  // Heurística estável: se estivermos no fim da lista no momento do Insert, é um Append
-  FIsAppending := (FVirtualIndex.Count > 0) and EOF;
-
+  FIsAppending := (PEntityRecordHeader(ActiveBuffer).BookmarkFlag = bfEOF);
   if FInsertObj <> nil then
   begin
     FInsertObj.Free;
@@ -792,7 +788,7 @@ begin
 
   if (Pointer(ActiveBuffer) <> nil) then
   begin
-    // Seta flags de controle virtual para o novo buffer de inserção
+    // Set virtual control flags for the new insertion buffer
     PEntityRecordHeader(Pointer(ActiveBuffer)).BookmarkIndex := -2; 
     PEntityRecordHeader(Pointer(ActiveBuffer)).BookmarkFlag := bfInserted;
   end;
@@ -1078,7 +1074,7 @@ begin
   if (Pointer(Bookmark) = nil) or (FVirtualIndex.Count = 0) then
     Exit;
 
-  // Em datasets virtuais, o bookmark armazena o índice lógico.
+  // In virtual datasets, the bookmark stores the logical index.
   Idx := PInteger(Pointer(Bookmark))^;
   Result := (Idx >= 0) and (Idx < FVirtualIndex.Count);
 end;
@@ -1158,7 +1154,7 @@ begin
   if not Active then Exit;
   Header := PEntityRecordHeader(ActiveBuffer);
 
-  // 1. Identificar o objeto de destino — PRIORIDADE ABSOLUTA à pintura do buffer ativo (Grid)
+  // 1. Identify target object - ABSOLUTE PRIORITY to active buffer painting (Grid)
   CurrentObj := nil;
   
   if (Header <> nil) then
@@ -1169,7 +1165,7 @@ begin
       CurrentObj := FItems[FVirtualIndex[Header.BookmarkIndex]];
   end;
 
-  // 2. Fallback para cursor global (leitura programática Field.Value ou navegação fora do loop de pintura)
+  // 2. Fallback to global cursor (programmatic Field.Value access or navigation outside the painting loop)
   if (CurrentObj = nil) and (FCurrentRec >= 0) and (FCurrentRec < FVirtualIndex.Count) then
   begin
      CurrentObj := FItems[FVirtualIndex[FCurrentRec]];
@@ -1182,7 +1178,7 @@ begin
 
   PValue := Pointer(PByte(CurrentObj) + PropMap.FieldValueOffset);
 
-  // Fallback por RTTI se offset não estiver definido
+  // 3. RTTI Fallback if field offset is not defined
   if (PropMap.FieldValueOffset <= 0) then
   begin
    Context := TRttiContext.Create;
