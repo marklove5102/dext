@@ -12,24 +12,26 @@ uses
 begin
   SetConsoleCharSet;
   try
-    WriteLn;
-    WriteLn('=== Dext - EntityDataSet Unit Tests ===');
-    WriteLn;
+    SafeWriteln;
+    SafeWriteln('=== Dext - EntityDataSet Unit Tests ===');
+    SafeWriteln;
 
     TTest.SetExitCode(
       TTest.Configure
         .Verbose
         .RegisterFixtures([
+        {
           TEntityDataSetTests,
           TProductDataSetTests,
           TMasterDetailDataSetTests,
+          }
           TEntityDataSetCRUDTests
         ]).Run
     );
   except
     on E: Exception do
     begin
-      WriteLn('FATAL ERROR: ', E.ClassName, ': ', E.Message);
+      SafeWriteln('FATAL ERROR: ' + E.ClassName + ': ' + E.Message);
       ExitCode := 1;
     end;
   end;

@@ -1,4 +1,4 @@
-unit Dext.Entity.DataSet.Tests;
+﻿unit Dext.Entity.DataSet.Tests;
 
 interface
 
@@ -224,6 +224,10 @@ type
     procedure Test_Locate_After_CRUD;
     [Test]
     procedure Test_Filter_After_Append;
+    [Test]
+    procedure Test_Insert_Between_Records;
+    [Test]
+    procedure Test_Insert_With_Sort;
   end;
 
 implementation
@@ -712,6 +716,82 @@ begin
   
   Should(FDataSet.RecordCount).Be(1).Because('Apenas o novo registro (Id=10) deve ser visível');
   Should(FDataSet.FieldByName('Name').AsString).Be('Passes Filter');
+end;
+
+procedure TEntityDataSetCRUDTests.Test_Insert_Between_Records;
+begin
+  // Record 1: Id 1 (Cesar) - Adicionado no Setup
+  
+  // Adicionar Record 3: Id 3 (Romero) no final
+  FDataSet.Append;
+  FDataSet.FieldByName('Id').AsInteger := 3;
+  FDataSet.FieldByName('Name').AsString := 'Romero';
+  FDataSet.Post;
+
+  WriteLn('[Debug Test 1/6] Should(FDataSet.RecordCount).Be(2), FDataSet.RecordCount = ', FDataSet.RecordCount);
+  Should(FDataSet.RecordCount).Be(2);
+
+  // Navegar para o Record 3
+  FDataSet.Last;
+  WriteLn('[Debug Test 2/6] FDataSet.FieldByName(''Id'').AsInteger).Be(3), FDataSet.FieldByName(''Id'').AsInteger = ', FDataSet.FieldByName('Id').AsInteger);
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(3);
+
+  // Inserir entre Record 1 e Record 3
+  FDataSet.Insert; // Deve inserir ANTES de Record 3
+  FDataSet.FieldByName('Id').AsInteger := 2;
+  FDataSet.FieldByName('Name').AsString := 'Meio';
+  FDataSet.Post;
+
+  WriteLn('[Debug Test 3/6] Should(FDataSet.RecordCount).Be(3), FDataSet.RecordCount = ', FDataSet.RecordCount);
+  Should(FDataSet.RecordCount).Be(3);
+
+  // VERIFICAR ORDEM (Deve ser 1, 2, 3)
+  FDataSet.First;
+  WriteLn('[Debug Test 4/6]');
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(1).Because('Primeiro deve ser Cesar (Id=1)');
+  FDataSet.Next;
+  WriteLn('[Debug Test 5/6]');
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(2).Because('Segundo deve ser o novo (Id=2) e não o Romero');
+  FDataSet.Next;
+  WriteLn('[Debug Test 6/6]');
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(3).Because('Terceiro deve ser Romero (Id=3)');
+end;
+
+procedure TEntityDataSetCRUDTests.Test_Insert_With_Sort;
+begin
+  // Record 1: Id 1 (Cesar) - from Setup
+  
+  // Add Record 3
+  FDataSet.Append;
+  FDataSet.FieldByName('Id').AsInteger := 3;
+  FDataSet.FieldByName('Name').AsString := 'Romero';
+  FDataSet.Post;
+  
+  // Apply sort by Name ascending
+  FDataSet.IndexFieldNames := 'Name';
+  
+  // After sort: Cesar(1), Romero(3)
+  FDataSet.First;
+  Should(FDataSet.FieldByName('Name').AsString).Be('Cesar').Because('Sort: Cesar first');
+  FDataSet.Next;
+  Should(FDataSet.FieldByName('Name').AsString).Be('Romero').Because('Sort: Romero second');
+  
+  // Insert while on Romero - new record with Name 'Meio' should appear
+  // between Cesar and Romero after sort is applied
+  FDataSet.Insert;
+  FDataSet.FieldByName('Id').AsInteger := 2;
+  FDataSet.FieldByName('Name').AsString := 'Meio';
+  FDataSet.Post;
+  
+  Should(FDataSet.RecordCount).Be(3);
+  
+  // With sort by Name: Cesar, Meio, Romero
+  FDataSet.First;
+  Should(FDataSet.FieldByName('Name').AsString).Be('Cesar').Because('Sort after insert: Cesar first');
+  FDataSet.Next;
+  Should(FDataSet.FieldByName('Name').AsString).Be('Meio').Because('Sort after insert: Meio second');
+  FDataSet.Next;
+  Should(FDataSet.FieldByName('Name').AsString).Be('Romero').Because('Sort after insert: Romero third');
 end;
 
 initialization

@@ -282,7 +282,7 @@ begin
     except
       on E: Exception do
       begin
-        WriteLn('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
+        SafeWriteln('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
         FContext.Response.Status(400).Json(Format('{"error": "Binding error: %s"}', [E.Message]));
         Result := False;
       end;
@@ -310,7 +310,7 @@ begin
     except
       on E: Exception do
       begin
-        WriteLn('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
+        SafeWriteln('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
         FContext.Response.Status(400).Json(Format('{"error": "Binding error: %s"}', [E.Message]));
         Result := False;
       end;
@@ -380,7 +380,7 @@ begin
     except
       on E: Exception do
       begin
-        WriteLn('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
+        SafeWriteln('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
         FContext.Response.Status(400).Json(Format('{"error": "Binding error: %s"}', [E.Message]));
         Result := False;
       end;
@@ -419,7 +419,7 @@ begin
     except
       on E: Exception do
       begin
-        WriteLn('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
+        SafeWriteln('[Dext.Web] Binding/Validation Error: ', E.ClassName, ': ', E.Message);
         FContext.Response.Status(400).Json(Format('{"error": "Binding error: %s"}', [E.Message]));
         Result := False;
       end;

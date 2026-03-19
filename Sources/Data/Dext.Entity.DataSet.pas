@@ -10,6 +10,7 @@ uses
   System.TypInfo,
   System.Math,
   Data.DB,
+  Dext.Utils,
   Dext.Collections,
   Dext.Collections.Vector,
   Dext.Collections.Dict,
@@ -53,6 +54,8 @@ type
     FCurrentRec: Integer; // Controle de cursor nativo do dataset
     FIsCursorOpen: Boolean;
     FInsertObj: TObject; // Temporary object for uncommitted dsInsert
+    FIsAppending: Boolean;
+    FInsertPosition: Integer;
     
     procedure SetItems(const Value: IList<TObject>);
     procedure SetIndexFieldNames(const Value: string);
@@ -95,6 +98,8 @@ type
     
     function GetRecordSize: Word; override;
     function GetRecordCount: Integer; override;
+    function GetRecNo: Integer; override;
+    procedure SetRecNo(Value: Integer); override;
 
     // DML e Edição
     procedure SetFieldData(Field: TField; Buffer: TValueBuffer); override;
@@ -106,6 +111,7 @@ type
     procedure InternalInsert; override;
     procedure InternalFirst; override;
     procedure InternalLast; override;
+    procedure DoBeforeInsert; override;
 
   private
     function CreateNewEntity: TObject;
@@ -120,10 +126,12 @@ type
     /// </summary>
     function GetFieldData(Field: TField; var Buffer: TValueBuffer): Boolean; override;
     function Locate(const KeyFields: string; const KeyValues: Variant; Options: TLocateOptions = []): Boolean; override;
+    function BookmarkValid(Bookmark: TBookmark): Boolean; override;
     /// <summary>
     ///  Carga de dados de Objetos
     /// </summary>
     procedure Load(const AItems: IList<TObject>; AClass: TClass; AOwns: Boolean = False); overload;
+
     procedure Load(const AItems: TArray<TObject>; AClass: TClass); overload;
     
     /// <summary>
@@ -145,6 +153,42 @@ uses
   Dext.Specifications.Interfaces,
   Dext.Specifications.Parser,
   Dext.Specifications.Evaluator;
+  
+type
+  TRttiHelper = class
+  public
+    class function GetFieldPtr(Instance: TObject; const FieldName: string): Pointer;
+    class function CreateInstance(AClass: TClass): TObject;
+  end;
+
+{ TRttiHelper }
+
+class function TRttiHelper.CreateInstance(AClass: TClass): TObject;
+var
+  RType: TRttiType;
+  Method: TRttiMethod;
+  Ctx: TRttiContext;
+begin
+  Ctx := TRttiContext.Create;
+  RType := Ctx.GetType(AClass);
+  for Method in RType.GetMethods do
+    if Method.IsConstructor and (Length(Method.GetParameters) = 0) then
+      Exit(Method.Invoke(AClass, []).AsObject);
+  Result := nil;
+end;
+
+class function TRttiHelper.GetFieldPtr(Instance: TObject; const FieldName: string): Pointer;
+var
+  Ctx: TRttiContext;
+  RField: TRttiField;
+begin
+  Ctx := TRttiContext.Create;
+  RField := Ctx.GetType(Instance.ClassType).GetField(FieldName);
+  if RField <> nil then
+    Result := PByte(Instance) + RField.Offset
+  else
+    Result := nil;
+end;
 
 { TEntityDataSet }
 
@@ -155,6 +199,7 @@ begin
   FHeaderSize := SizeOf(TEntityRecordHeader);
   FReadOnly := False;
   BookmarkSize := SizeOf(Integer);
+  FInsertPosition := -2;
 end;
 
 destructor TEntityDataSet.Destroy;
@@ -553,6 +598,8 @@ begin
   end;
 end;
 
+{ TEntityDataSet }
+
 procedure TEntityDataSet.InternalOpen;
 begin
   FIsCursorOpen := True;
@@ -571,6 +618,7 @@ begin
 
   ApplyFilterAndSort;
   BookmarkSize := SizeOf(Integer);
+  FRecordSize := SizeOf(TEntityRecordHeader); // Importante para o VCL alocar buffers com espaço para o Header
   FCurrentRec := -1; // Reset de cursor nativo
   BindFields(True);
 end;
@@ -617,24 +665,58 @@ end;
 procedure TEntityDataSet.InternalPost;
 var
   NewIdx: Integer;
+  TargetIdx: Integer;
+  LPos: Integer;
 begin
   if State = dsInsert then
   begin
     if Assigned(FInsertObj) then
     begin
-      // 1. Adicionar o objeto persistente na lista real
-      FItems.Add(FInsertObj);
-      NewIdx := FItems.Count - 1;
-      FInsertObj := nil; // Agora a lista é dona do objeto (se configurado)
+      // 1. Decidir se adiciona ao final (Append) ou insere na posição (Insert)
+      if FIsAppending then
+      begin
+        FItems.Add(FInsertObj);
+        NewIdx := FItems.Count - 1;
+      end
+      else
+      begin
+        // Se FInsertPosition veio do RecNo (1-based), ajustamos para 0-based
+        // Se RecNo era 0 (vazio), LPos fica -1. Se era 1, LPos fica 0.
+        LPos := FInsertPosition - 1;
 
-      // 2. Refresh da visualização (Filtros/Sorte/Indices)
-      ApplyFilterAndSort; 
+        if (LPos < 0) or (FVirtualIndex.Count = 0) then
+          TargetIdx := 0
+        else if (LPos >= FVirtualIndex.Count) then
+          TargetIdx := FItems.Count
+        else
+          // No Insert, usamos o índice físico apontado pela visão virtual na posição guardada no DoBeforeInsert
+          TargetIdx := FVirtualIndex[LPos];
 
-      // 3. Posicionar o cursor no novo item na visão virtual
+        if TargetIdx >= FItems.Count then
+        begin
+          FItems.Add(FInsertObj);
+          NewIdx := FItems.Count - 1;
+        end
+        else
+        begin
+          FItems.Insert(TargetIdx, FInsertObj);
+          NewIdx := TargetIdx;
+        end;
+      end;
+
+      FInsertObj := nil; 
+      FIsAppending := False; 
+      FInsertPosition := -2;
+
+      // 2. Atualizar a visão virtual
+      ApplyFilterAndSort;
+
+      // 3. Posicionar o cursor no novo item
       FCurrentRec := FVirtualIndex.IndexOf(NewIdx);
 
-      // 4. Sincronizar UI e Controles (Crucial para RecordCount refletir na hora)
+      // 4. Notificar mudança e sincronizar buffers
       Resync([]);
+      DataEvent(deDataSetChange, 0);
     end;
   end
   else if State = dsEdit then
@@ -656,11 +738,20 @@ end;
 
 procedure TEntityDataSet.InternalEdit;
 begin
-  // No-op. A edição (dsEdit) não exige alocação em buffer físico (Update direto via pointer).
+  // No-op.
+end;
+
+procedure TEntityDataSet.DoBeforeInsert;
+begin
+  FInsertPosition := GetRecNo;
+  inherited DoBeforeInsert;
 end;
 
 procedure TEntityDataSet.InternalInsert;
 begin
+  // Heurística estável: se estivermos no fim da lista no momento do Insert, é um Append
+  FIsAppending := (FVirtualIndex.Count > 0) and EOF;
+
   if FInsertObj <> nil then
   begin
     FInsertObj.Free;
@@ -670,21 +761,19 @@ begin
   
   if FInsertObj = nil then
     raise Exception.Create('Auto-append needs a parameterless constructor for ' + FEntityClass.ClassName);
-    
+
   if (Pointer(ActiveBuffer) <> nil) then
   begin
-    PEntityRecordHeader(ActiveBuffer).BookmarkIndex := -2; // Insert phantom index
-    PEntityRecordHeader(ActiveBuffer).BookmarkFlag := bfInserted;
+    // Seta flags de controle virtual para o novo buffer de inserção
+    PEntityRecordHeader(Pointer(ActiveBuffer)).BookmarkIndex := -2; 
+    PEntityRecordHeader(Pointer(ActiveBuffer)).BookmarkFlag := bfInserted;
   end;
 end;
 
 procedure TEntityDataSet.InternalAddRecord(Buffer: TRecordBuffer; Append: Boolean);
 begin
-  // O InternalAddRecord costuma ser chamado por AppendRecord/InsertRecord.
-  // Já temos a lógica centralizada no InternalPost que é chamado pelo AppendRecord do TDataSet.
-  // Se houver um FInsertObj pendente, forçamos o post.
-  if Assigned(FInsertObj) then
-    InternalPost;
+  FIsAppending := Append;
+  InternalPost;
 end;
 
 procedure TEntityDataSet.InternalFirst;
@@ -694,7 +783,10 @@ end;
 
 procedure TEntityDataSet.InternalLast;
 begin
-  FCurrentRec := FVirtualIndex.Count;
+  if RecordCount > 0 then
+    FCurrentRec := RecordCount - 1
+  else
+    FCurrentRec := -1;
 end;
 
 procedure TEntityDataSet.InternalInitFieldDefs;
@@ -899,7 +991,7 @@ end;
 
 procedure TEntityDataSet.InternalGotoBookmark(Bookmark: TBookmark);
 begin
-  FCurrentRec := PInteger(Bookmark)^;
+  FCurrentRec := PInteger(Pointer(Bookmark))^;
 end;
 
 function TEntityDataSet.GetBookmarkFlag(Buffer: TRecordBuffer): TBookmarkFlag;
@@ -914,11 +1006,11 @@ end;
 
 procedure TEntityDataSet.InternalSetToRecord(Buffer: TRecordBuffer);
 var
-  Index: Integer;
+  Idx: Integer;
 begin
-  Index := PEntityRecordHeader(Buffer).BookmarkIndex;
-  if Index >= 0 then
-    FCurrentRec := Index;
+  Idx := PEntityRecordHeader(Buffer).BookmarkIndex;
+  if (Idx >= 0) and (Idx < FVirtualIndex.Count) then
+    FCurrentRec := Idx;
 end;
 
 function TEntityDataSet.GetRecordSize: Word;
@@ -931,19 +1023,55 @@ begin
   Result := FVirtualIndex.Count;
 end;
 
+function TEntityDataSet.GetRecNo: Integer;
+begin
+  CheckActive;
+  Result := -1;
+  if Pointer(ActiveBuffer) <> nil then
+    Result := PEntityRecordHeader(Pointer(ActiveBuffer)).BookmarkIndex + 1;
+end;
+
+procedure TEntityDataSet.SetRecNo(Value: Integer);
+begin
+  CheckBrowseMode;
+  Value := System.Math.Min(System.Math.Max(Value, 1), RecordCount);
+  if RecNo <> Value then
+  begin
+    DoBeforeScroll;
+    FCurrentRec := Value - 1;
+    Resync([rmCenter]);
+    DoAfterScroll;
+  end;
+end;
+
+function TEntityDataSet.BookmarkValid(Bookmark: TBookmark): Boolean;
+var
+  Idx: Integer;
+begin
+  Result := False;
+  if (Pointer(Bookmark) = nil) or (FVirtualIndex.Count = 0) then
+    Exit;
+
+  // Em datasets virtuais, o bookmark armazena o índice lógico.
+  Idx := PInteger(Pointer(Bookmark))^;
+  Result := (Idx >= 0) and (Idx < FVirtualIndex.Count);
+end;
+
 function TEntityDataSet.GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode; DoSearch: Boolean): TGetResult;
 var
   Header: PEntityRecordHeader;
 begin
   Header := PEntityRecordHeader(Buffer);
-  Result := grOK;
 
   case GetMode of
     gmNext:
       begin
-        if FCurrentRec < FVirtualIndex.Count then
+        if FCurrentRec < FVirtualIndex.Count - 1 then
+        begin
           Inc(FCurrentRec);
-        if FCurrentRec >= FVirtualIndex.Count then
+          Result := grOK;
+        end
+        else
           Result := grEOF;
       end;
       
@@ -952,13 +1080,17 @@ begin
         if FCurrentRec >= 0 then
           Dec(FCurrentRec);
         if FCurrentRec < 0 then
-          Result := grBOF;
+          Result := grBOF
+        else
+          Result := grOK;
       end;
       
     gmCurrent:
       begin
         if (FCurrentRec < 0) or (FCurrentRec >= FVirtualIndex.Count) then
-          Result := grError;
+          Result := grError
+        else
+          Result := grOK;
       end;
   else
     Result := grError;
@@ -1000,28 +1132,27 @@ begin
   if not Active then Exit;
   Header := PEntityRecordHeader(ActiveBuffer);
 
-  // 1. Identificar o objeto de destino
+  // 1. Identificar o objeto de destino — Prioridade absoluta ao cabeçalho do buffer ativo (essencial para Grid painting)
   CurrentObj := nil;
   
-  if (Header <> nil) and (Header.BookmarkIndex = -2) then
+  if (Header <> nil) then
   begin
-    // Suporte a novo registro sendo inserido (phantom index -2)
-    if (State = dsInsert) and (FInsertObj <> nil) then
-      CurrentObj := FInsertObj;
-  end
-  else if (Header <> nil) and (Header.BookmarkIndex >= 0) and (Header.BookmarkIndex < FVirtualIndex.Count) then
-  begin
-    // Registro existente via header
-    CurrentObj := FItems[FVirtualIndex[Header.BookmarkIndex]];
-  end
-  else
-  begin
-    // Fallback para o registro atual do cursor
-    if (FCurrentRec >= 0) and (FCurrentRec < FVirtualIndex.Count) then
+    if (Header.BookmarkIndex = -2) then
     begin
-      CurrentObj := FItems[FVirtualIndex[FCurrentRec]];
+      // Suporte a novo registro sendo inserido (phantom index -2)
+      if (State = dsInsert) and (FInsertObj <> nil) then
+        CurrentObj := FInsertObj;
+    end
+    else if (Header.BookmarkIndex >= 0) and (Header.BookmarkIndex < FVirtualIndex.Count) then
+    begin
+      // Registro existente via index no header do buffer sendo lido
+      CurrentObj := FItems[FVirtualIndex[Header.BookmarkIndex]];
     end;
   end;
+
+  // 2. Fallback para cursor global apenas se não houver buffer ativo ou índice no buffer (menos comum em browse/paint)
+  if (CurrentObj = nil) and (FCurrentRec >= 0) and (FCurrentRec < FVirtualIndex.Count) then
+    CurrentObj := FItems[FVirtualIndex[FCurrentRec]];
 
   if (CurrentObj = nil) or (FEntityMap = nil) then Exit;
 
@@ -1359,4 +1490,5 @@ function TEntityDataSet.IsCursorOpen: Boolean;
 begin
   Result := FIsCursorOpen;
 end;
+
 end.

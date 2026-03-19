@@ -417,6 +417,7 @@ type
     constructor Create(const Value: System.IEnumerable<T>); overload;
     constructor Create(const Value: Dext.Collections.Base.IEnumerable<T>); overload;
     constructor Create(const Value: TArray<T>); overload;
+    // TODO : add explicit IList<T>
 
     function BeEmpty: ShouldList<T>;
     function NotBeEmpty: ShouldList<T>;

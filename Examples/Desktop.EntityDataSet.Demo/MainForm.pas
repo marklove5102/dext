@@ -41,31 +41,25 @@ implementation
 {$R *.dfm}
 
 procedure TFormMain.FormCreate(Sender: TObject);
+var
+  I: Integer;
+  P: TProduct;
 begin
   FDataSet := TEntityDataSet.Create(Self);
   DataSource1.DataSet := FDataSet;
   DBGridProducts.DataSource := DataSource1;
 
-  // Criando dados mockados para o showcase
-  SetLength(FProducts, 3);
+  // Criando 100 dados mockados para o showcase
+  SetLength(FProducts, 100);
   
-  var P1 := TProduct.Create;
-  P1.Id := 101;
-  P1.Description := 'Macbook Pro M3';
-  P1.Price := 18500.00;
-  FProducts[0] := P1;
-
-  var P2 := TProduct.Create;
-  P2.Id := 102;
-  P2.Description := 'iPhone 15 Pro Max';
-  P2.Price := 9400.00;
-  FProducts[1] := P2;
-
-  var P3 := TProduct.Create;
-  P3.Id := 103;
-  P3.Description := 'AirPods Max';
-  P3.Price := 5400.00;
-  FProducts[2] := P3;
+  for I := 0 to 99 do
+  begin
+    P := TProduct.Create;
+    P.Id := 100 + I;
+    P.Description := 'Product ' + IntToStr(I + 1);
+    P.Price := 100.0 * (I + 1);
+    FProducts[I] := P;
+  end;
 
   // Carregando dados no DataSet
   FDataSet.Load(FProducts, TProduct);

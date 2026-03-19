@@ -120,6 +120,6 @@ begin
     end;
   except
     on E: Exception do
-      Writeln(E.ClassName, ': ', E.Message);
+      SafeWriteln(E.ClassName, ': ', E.Message);
   end;
 end.
