@@ -161,6 +161,14 @@ type
     procedure Test_Filter_Expression;
     [Test]
     procedure Test_Locate_Success;
+    [Test]
+    procedure Test_GenericArrayLoad;
+    [Test]
+    procedure Test_GenericIListLoad;
+    [Test]
+    procedure Test_ExportToJson;
+    [Test]
+    procedure Test_LoadFromJson;
   end;
 
   [TestFixture('TEntityDataSet Complex Types and Blobs')]
@@ -291,6 +299,23 @@ type
     procedure Test_ShadowProperty_Write_Updates_Context;
   end;
 
+  [TestFixture('TEntityDataSet Calculated Fields')]
+  TCalculatedFieldsTests = class
+  private
+    FDataSet: TEntityDataSet;
+    procedure OnCalcFields(DataSet: TDataSet);
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_Calculated_Field;
+    [Test]
+    procedure Test_Internal_Calculated_Field;
+  end;
+
 implementation
 
 { TEntityDataSetTests }
@@ -343,6 +368,78 @@ procedure TEntityDataSetTests.Test_Locate_Success;
 begin
   Should(FDataSet.Locate('Name', 'Romero', [])).BeTrue;
   Should(FDataSet.FieldByName('Id').AsInteger).Be(2);
+end;
+
+procedure TEntityDataSetTests.Test_GenericArrayLoad;
+var
+  TypedDS: TEntityDataSet;
+  TypedArray: TArray<TUserTest>;
+begin
+  SetLength(TypedArray, 1);
+  TypedArray[0] := TUserTest.Create;
+  TypedArray[0].Name := 'Alex';
+  
+  TypedDS := TEntityDataSet.Create(nil);
+  try
+    TypedDS.Load<TUserTest>(TypedArray);
+    Should(TypedDS.RecordCount).Be(1);
+    Should(TypedDS.FieldByName('Name').AsString).Be('Alex');
+  finally
+    TypedDS.Free;
+    TypedArray[0].Free;
+  end;
+end;
+
+procedure TEntityDataSetTests.Test_GenericIListLoad;
+var
+  TypedDS: TEntityDataSet;
+  TypedList: IList<TUserTest>;
+  U: TUserTest;
+begin
+  TypedList := TCollections.CreateList<TUserTest>(True);
+  U := TUserTest.Create;
+  U.Name := 'Alex List';
+  TypedList.Add(U);
+  
+  TypedDS := TEntityDataSet.Create(nil);
+  try
+    TypedDS.Load<TUserTest>(TypedList);
+    Should(TypedDS.RecordCount).Be(1);
+    Should(TypedDS.FieldByName('Name').AsString).Be('Alex List');
+  finally
+    TypedDS.Free;
+  end;
+end;
+
+procedure TEntityDataSetTests.Test_ExportToJson;
+begin
+  var Json := FDataSet.AsJsonArray;
+  Should(Json.Contains('Cesar')).BeTrue;
+  Should(Json.Contains('Romero')).BeTrue;
+  
+  FDataSet.First;
+  var ObjJson := FDataSet.AsJsonObject;
+  Should(ObjJson.Contains('Cesar')).BeTrue;
+  Should(ObjJson.Contains('Romero')).BeFalse;
+end;
+
+procedure TEntityDataSetTests.Test_LoadFromJson;
+var
+  Json: string;
+  TypedDS: TEntityDataSet;
+begin
+  Json := '[{"Id":1,"Name":"JSON 1","Active":true},{"Id":2,"Name":"JSON 2","Active":false}]';
+  TypedDS := TEntityDataSet.Create(nil);
+  try
+    TypedDS.LoadFromJson<TUserTest>(Json);
+    Should(TypedDS.RecordCount).Be(2);
+    TypedDS.First;
+    Should(TypedDS.FieldByName('Name').AsString).Be('JSON 1');
+    TypedDS.Next;
+    Should(TypedDS.FieldByName('Name').AsString).Be('JSON 2');
+  finally
+    TypedDS.Free;
+  end;
 end;
 
 { TProductDataSetTests }
@@ -498,6 +595,65 @@ begin
   FDataSet.Filter := 'Price > 20';
   FDataSet.Filtered := True;
   Should(FDataSet.RecordCount).Be(2);
+end;
+
+{ TCalculatedFieldsTests }
+
+procedure TCalculatedFieldsTests.Setup;
+begin
+  FDataSet := TEntityDataSet.Create(nil);
+  var U := TUserTest.Create;
+  U.Id := 10;
+  U.Score := 20;
+  var Lst := TCollections.CreateList<TObject>(True);
+  Lst.Add(U);
+  FDataSet.Load(Lst, TUserTest, False);
+  FDataSet.Close;
+  
+  // Add calculated field manually
+  var Fld := TFloatField.Create(FDataSet);
+  Fld.FieldName := 'CalculatedScore';
+  Fld.FieldKind := fkCalculated;
+  Fld.DataSet := FDataSet;
+
+  FDataSet.OnCalcFields := Self.OnCalcFields;
+  FDataSet.Open;
+end;
+
+procedure TCalculatedFieldsTests.TearDown;
+begin
+  FDataSet.Free;
+end;
+
+procedure TCalculatedFieldsTests.OnCalcFields(DataSet: TDataSet);
+begin
+  DataSet.FieldByName('CalculatedScore').AsFloat := DataSet.FieldByName('Score').AsFloat * 2;
+end;
+
+procedure TCalculatedFieldsTests.Test_Calculated_Field;
+begin
+  Should(FDataSet.FieldByName('CalculatedScore').AsFloat).Be(40);
+end;
+
+procedure TCalculatedFieldsTests.Test_Internal_Calculated_Field;
+begin
+  FDataSet.Close;
+  
+  // Add internal calc field manually
+  var Fld := TFloatField.Create(FDataSet);
+  Fld.FieldName := 'InternalCalc';
+  Fld.FieldKind := fkInternalCalc;
+  Fld.DataSet := FDataSet;
+  
+  FDataSet.Open;
+  
+  // Set value manually (simulating internal calc logic or event)
+  FDataSet.First;
+  FDataSet.Edit;
+  FDataSet.FieldByName('InternalCalc').AsFloat := 55;
+  FDataSet.Post;
+  
+  Should(FDataSet.FieldByName('InternalCalc').AsFloat).Be(55);
 end;
 
 { TMasterDetailDataSetTests }

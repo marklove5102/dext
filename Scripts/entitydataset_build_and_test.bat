@@ -7,14 +7,14 @@ echo.
 
 call "C:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat"
 
-echo.
-echo [1/4] Building Dext.Core...
-msbuild "C:\dev\Dext\DextRepository\Sources\Dext.Core.dproj" /t:Build /p:Config=Debug /p:Platform=Win32 /v:minimal /nologo
-if %errorlevel% neq 0 (
-    echo.
-    echo ERROR: Build failed for Dext.Core
-    exit /b %errorlevel%
-)
+@REM echo.
+@REM echo [1/4] Building Dext.Core...
+@REM msbuild "C:\dev\Dext\DextRepository\Sources\Dext.Core.dproj" /t:Build /p:Config=Debug /p:Platform=Win32 /v:minimal /nologo
+@REM if %errorlevel% neq 0 (
+@REM     echo.
+@REM     echo ERROR: Build failed for Dext.Core
+@REM     exit /b %errorlevel%
+@REM )
 
 echo.
 echo [2/4] Building Dext.EF.Core...
