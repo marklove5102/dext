@@ -168,6 +168,7 @@ type
     IsJsonColumn: Boolean;
     UseJsonB: Boolean; // PostgreSQL JSONB vs JSON
     IsLazy: Boolean; // New: Support for Auto-Proxies / Explicit Lazy
+    Prop: TRttiProperty; // Cached RTTI property
     constructor Create(const APropName: string);
   end;
 
@@ -618,6 +619,8 @@ begin
       if PropMap.DataType = ftUnknown then
         PropMap.DataType := TypeInfoToFieldType(Prop.PropertyType.Handle);
 
+      PropMap.Prop := Prop; // Cache the RTTI property for fast access
+
       if Prop.PropertyType.TypeKind in [tkClass, tkInterface] then
       begin
         // Filter out classes that have a registered converter (e.g. TStrings)
@@ -663,6 +666,11 @@ begin
                     PropMap.FieldOffset := BackingFld.Offset + Meta.HasValueField.Offset;
                   
                   PropMap.PropertyType := Meta.InnerType;
+              // Update FieldOffset if not yet set
+              if PropMap.FieldValueOffset <= 0 then
+                PropMap.FieldValueOffset := BackingFld.Offset;
+
+              PropMap.Prop := Prop;
                 end;
            end
            else
