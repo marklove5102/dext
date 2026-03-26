@@ -598,7 +598,7 @@ begin
       // Convention: Property "Name" has backing field "FName"
       if (Prop.PropertyType.TypeKind = tkRecord) then
       begin
-        var FieldName := 'F' + Prop.Name;
+        var FieldName := TReflection.NormalizeFieldName(Prop.Name);
         Field := Typ.GetField(FieldName);
         if Field <> nil then
           FFields.Add(ColName.ToLower, Field);

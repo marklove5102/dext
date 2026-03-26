@@ -26,6 +26,8 @@ uses
   Dext.Json.Utf8;
 
 type
+  PBytes = ^TBytes;
+
   /// <summary>
   ///   Data Structure of a Record Buffer for TEntityDataSet.
   ///   Stores fully updated bytes and modification trackers.
@@ -64,24 +66,23 @@ type
     FCurrentRec: Integer; // Dataset native cursor control
     FIsCursorOpen: Boolean;
     FInsertObj: TObject; // Temporary object for uncommitted dsInsert
+    FInsertObjRef: TObject; // Reference to track after post
     FIsAppending: Boolean;
     FPositionBeforeAction: Integer;
     FCalcOffsets: System.Generics.Collections.TDictionary<string, Integer>;
     FCalcAreaSize: Integer;
     FInternalCalcStorage: TArray<TBytes>;
-    
+    FPropertyCache: TDictionary<string, TRttiProperty>;
+
+    function GetProperty(const APropName: string): TRttiProperty;
     procedure SetItems(const Value: IList<TObject>);
     procedure SetIndexFieldNames(const Value: string);
     procedure ApplyFilterAndSort; overload;
     procedure ApplyFilterAndSort(AFiltered: Boolean); overload;
+    procedure ApplyFilterAndSort(AFiltered: Boolean; ATrackObj: TObject); overload;
     function CompareObjectsInternal(A, B: TObject; const APropNames: TArray<string>; RttiType: TRttiType): Integer;
     procedure BuildFieldDefs;
     
-    /// <summary>
-    ///   Core internal method that reads a field value from an entity object.
-    ///   Used by both GetFieldData overloads.
-    ///   Returns the value as Variant (Unassigned if not found).
-    /// </summary>
     function ReadFieldValue(Field: TField; out Value: Variant): Boolean;
   protected
     // TDataSet overrides for filtering and sorting
@@ -282,6 +283,19 @@ begin
   end;
 end;
 
+function TEntityDataSet.GetProperty(const APropName: string): TRttiProperty;
+begin
+  Result := nil;
+  if (FEntityClass = nil) then Exit;
+  if not FPropertyCache.TryGetValue(APropName, Result) then
+  begin
+    var LType := TReflection.Context.GetType(FEntityClass);
+    if LType <> nil then
+      Result := LType.GetProperty(APropName);
+    FPropertyCache.Add(APropName, Result);
+  end;
+end;
+
 constructor TEntityDataSet.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -291,6 +305,7 @@ begin
   BookmarkSize := SizeOf(Integer);
   FPositionBeforeAction := -2;
   FCalcOffsets := System.Generics.Collections.TDictionary<string, Integer>.Create;
+  FPropertyCache := TDictionary<string, TRttiProperty>.Create;
 end;
 
 destructor TEntityDataSet.Destroy;
@@ -298,6 +313,8 @@ begin
   FCalcOffsets.Free;
   if Assigned(FInsertObj) then
     FInsertObj.Free;
+    
+  FPropertyCache.Free;
     
   if FOwnsItems then
     FItems := nil; // IList cuidará da liberação se for o caso
@@ -669,6 +686,11 @@ begin
 end;
 
 procedure TEntityDataSet.ApplyFilterAndSort(AFiltered: Boolean);
+begin
+  ApplyFilterAndSort(AFiltered, nil);
+end;
+
+procedure TEntityDataSet.ApplyFilterAndSort(AFiltered: Boolean; ATrackObj: TObject);
 var
   Context: TRttiContext;
   CurrentObj: TObject;
@@ -679,8 +701,8 @@ var
   Passing: Boolean;
 begin
   // Salvar o objeto atual para restaurar FCurrentRec depois (mais seguro que índice físico)
-  CurrentObj := nil;
-  if (FCurrentRec >= 0) and (FCurrentRec < FVirtualIndex.Count) then
+  CurrentObj := ATrackObj;
+  if (CurrentObj = nil) and (FCurrentRec >= 0) and (FCurrentRec < FVirtualIndex.Count) then
     CurrentObj := FItems[FVirtualIndex[FCurrentRec]];
 
   FVirtualIndex.Clear;
@@ -894,7 +916,7 @@ begin
       begin
         RttiField := nil;
         for f in RttiType.GetFields do
-          if SameText(f.Name, PropName) or SameText(f.Name, 'F' + PropName) then
+          if SameText(f.Name, PropName) or SameText(f.Name, TReflection.NormalizeFieldName(PropName)) then
           begin
             RttiField := f;
             Break;
@@ -1104,8 +1126,8 @@ begin
       end
       else
       begin
-        // Adjust 1-based RecNo to 0-based index
-        TargetPos := FPositionBeforeAction - 1;
+        // Adjust 1-based RecNo to 0-based index or use the current virtual position
+        TargetPos := FPositionBeforeAction;
 
         if (TargetPos < 0) or (FVirtualIndex.Count = 0) then
           TargetIdx := 0
@@ -1115,7 +1137,7 @@ begin
           // In Insert mode, use the physical index pointed by the virtual view at the position stored in DoBeforeInsert
           TargetIdx := FVirtualIndex[TargetPos];
 
-        if TargetIdx >= FItems.Count then
+        if TargetIdx > FItems.Count then
         begin
           FItems.Add(FInsertObj);
           NewIdx := FItems.Count - 1;
@@ -1135,17 +1157,21 @@ begin
         Move(PByte(NativeInt(ActiveBuffer) + SizeOf(TEntityRecordHeader))^, FInternalCalcStorage[NewIdx][0], FCalcAreaSize);
       end;
 
+      FInsertObjRef := FInsertObj;
       FInsertObj := nil; 
       FIsAppending := False; 
       FPositionBeforeAction := -2;
 
-      // 2. Update Virtual View
-      ApplyFilterAndSort;
+      // 2. Update Virtual View and track new object
+      ApplyFilterAndSort(Filtered, FInsertObjRef);
+      FInsertObjRef := nil;
 
       // 3. Position cursor on the new item
-      FCurrentRec := FVirtualIndex.IndexOf(NewIdx);
+      // 4. Reset tracking state if context is present
+      if FDbContext <> nil then
+        FDbContext.ChangeTracker.Track(FInsertObj, esUnchanged);
 
-      // 4. Notificar mudança
+      // 5. Notificar mudança
       DataEvent(deDataSetChange, 0);
     end;
   end
@@ -1193,7 +1219,7 @@ end;
 
 procedure TEntityDataSet.DoBeforeInsert;
 begin
-  FPositionBeforeAction := GetRecNo;
+  FPositionBeforeAction := GetRecNo - 1;
   inherited DoBeforeInsert;
 end;
 
@@ -1248,6 +1274,15 @@ procedure TEntityDataSet.InternalInitFieldDefs;
     InnerInfo: PTypeInfo;
   begin
     if ATypeInfo = nil then Exit(ftUnknown);
+    
+    // Check for Proxy<T>, Lazy<T>, etc using centralized Reflection
+    if TReflection.IsSmartProp(ATypeInfo) then
+    begin
+      InnerInfo := TReflection.GetUnderlyingType(ATypeInfo);
+      if InnerInfo <> nil then
+        Exit(MapTypeToFieldType(InnerInfo));
+    end;
+
     case ATypeInfo.Kind of
       tkInteger, tkEnumeration:
       begin
@@ -1272,13 +1307,22 @@ procedure TEntityDataSet.InternalInitFieldDefs;
         Exit(ftLargeint);
       tkVariant:
         Exit(ftVariant);
-      tkRecord:
+      tkRecord, tkInterface:
       begin
         InnerInfo := TReflection.GetUnderlyingType(ATypeInfo);
-        if InnerInfo <> nil then
+        if (InnerInfo <> nil) and (InnerInfo <> ATypeInfo) then
           Exit(MapTypeToFieldType(InnerInfo))
         else
+        begin
+          var LTypeName := string(ATypeInfo.Name);
+          if LTypeName.Contains('Lazy<') or LTypeName.Contains('Prop<') then
+          begin
+             // Se falhou em resolver via RTTI mas o nome indica Lazy, tenta o fallback manual aqui se necessário
+             // ou pelo menos evita ftUnknown se for uma interface conhecida.
+             // Neste caso, se InnerInfo é nil, é porque o TReflection.GetUnderlyingType falhou para a INTERFACE.
+          end;
           Exit(ftUnknown);
+        end;
       end;
     else
       Exit(ftUnknown);
@@ -1332,8 +1376,15 @@ begin
         end
         else
         begin
+           // Search for field directly, then with F prefix, then normalized, then normalized with F
            RttiField := RttiType.GetField(PropMap.PropertyName);
            if RttiField = nil then RttiField := RttiType.GetField('F' + PropMap.PropertyName);
+           if RttiField = nil then RttiField := RttiType.GetField(TReflection.NormalizeFieldName(PropMap.PropertyName));
+           if RttiField = nil then RttiField := RttiType.GetField('F' + TReflection.NormalizeFieldName(PropMap.PropertyName));
+
+           // NEW: Special case for Lazy fields that might not have the F prefix in the map but have it in the class
+           if (RttiField = nil) and (not PropMap.PropertyName.StartsWith('F', True)) then
+             RttiField := RttiType.GetField('F' + PropMap.PropertyName);
 
            if RttiField <> nil then
            begin
@@ -1397,6 +1448,11 @@ begin
         if NewField <> nil then
         begin
           NewField.FieldName := PropMap.PropertyName;
+          if NewField is TFloatField then
+            TFloatField(NewField).Precision := PropMap.Precision;
+          if NewField is TCurrencyField then
+            TCurrencyField(NewField).Currency := True;
+
           if NewField is TStringField then
           begin
             if PropMap.MaxLength > 0 then
@@ -1678,47 +1734,77 @@ begin
     Exit;
   end;
 
-  // 4. RTTI Fallback if field offset is not defined
-  if (PropMap.FieldValueOffset <= 0) then
+  // 4. RTTI Fallback if field offset is not defined or is Lazy
+  if (PropMap.FieldValueOffset <= 0) or PropMap.IsLazy then
   begin
-    var RttiType := TReflection.Context.GetType(FEntityClass);
-    if RttiType <> nil then
+    var LProp := GetProperty(Field.FieldName);
+    if LProp <> nil then
     begin
-      var RttiProp := RttiType.GetProperty(Field.FieldName);
-      if RttiProp <> nil then
+      var LTempValue := LProp.GetValue(CurrentObj);
+      var LUnwrapped: TValue;
+      if TReflection.TryUnwrapProp(LTempValue, LUnwrapped) then
       begin
-        var TempValue := RttiProp.GetValue(CurrentObj);
-        var UnwrappedValue: TValue;
-        if TReflection.TryUnwrapProp(TempValue, UnwrappedValue) then
+        if not LUnwrapped.IsEmpty then
         begin
-          if UnwrappedValue.IsEmpty then Exit;
-          Value := UnwrappedValue.AsVariant;
-        end
+          if (Field.DataType in [ftDate, ftTime, ftDateTime]) then
+             Value := LUnwrapped.AsType<TDateTime>
+          else if (Field.DataType = ftCurrency) then
+             Value := LUnwrapped.AsCurrency
+          else
+             Value := LUnwrapped.AsVariant;
+        end;
+      end
+      else
+      begin
+        if (Field.DataType in [ftDate, ftTime, ftDateTime]) then
+           Value := LTempValue.AsType<TDateTime>
+        else if (Field.DataType = ftCurrency) then
+           Value := LTempValue.AsCurrency
         else
-          Value := TempValue.AsVariant;
-        Result := True;
-        Exit;
+           Value := LTempValue.AsVariant;
       end;
+      Result := not VarIsEmpty(Value);
+      Exit;
+    end;
 
-      var RttiField := RttiType.GetField(Field.FieldName);
+    // Last resort: RTTI Field
+    var ctx := TRttiContext.Create;
+    var LRttiType := ctx.GetType(CurrentObj.ClassType);
+    if LRttiType <> nil then
+    begin
+      var RttiField := LRttiType.GetField(Field.FieldName);
       if RttiField <> nil then
       begin
-        var TempValue := RttiField.GetValue(CurrentObj);
-        var UnwrappedValue: TValue;
-        if TReflection.TryUnwrapProp(TempValue, UnwrappedValue) then
+        var LFieldVal := RttiField.GetValue(CurrentObj);
+        var LUnwrappedField: TValue;
+        if TReflection.TryUnwrapProp(LFieldVal, LUnwrappedField) then
         begin
-          if UnwrappedValue.IsEmpty then Exit;
-          Value := UnwrappedValue.AsVariant;
+          if not LUnwrappedField.IsEmpty then
+          begin
+            if (Field.DataType in [ftDate, ftTime, ftDateTime]) then
+               Value := LUnwrappedField.AsType<TDateTime>
+            else if (Field.DataType = ftCurrency) then
+               Value := LUnwrappedField.AsCurrency
+            else
+               Value := LUnwrappedField.AsVariant;
+          end;
         end
         else
-          Value := TempValue.AsVariant;
-        Result := True;
+        begin
+          if (Field.DataType in [ftDate, ftTime, ftDateTime]) then
+             Value := LFieldVal.AsType<TDateTime>
+          else if (Field.DataType = ftCurrency) then
+             Value := LFieldVal.AsCurrency
+          else
+             Value := LFieldVal.AsVariant;
+        end;
+        Result := not VarIsEmpty(Value);
         Exit;
       end;
     end;
-    Exit;
   end;
 
+  // 5. Direct value extraction (Fast Path)
   // Checar flag de nulo se definido (SmartProp, Nullable, Lazy)
   if (PropMap.FieldOffset > 0) then
   begin
@@ -1747,7 +1833,6 @@ begin
 
   if PValue = nil then Exit;
 
-  // 5. Direct value extraction (Fast Path)
   case PropMap.DataType of
     ftString, ftWideString, ftMemo, ftWideMemo:
       Value := PString(PValue)^;
@@ -1755,17 +1840,19 @@ begin
       Value := PInteger(PValue)^;
     ftLargeint:
       Value := PInt64(PValue)^;
-    ftFloat, ftCurrency:
+    ftFloat:
       Value := PDouble(PValue)^;
+    ftCurrency:
+      Value := PCurrency(PValue)^;
     ftBoolean:
       Value := PBoolean(PValue)^;
     ftDateTime, ftDate, ftTime:
       Value := PDateTime(PValue)^;
     ftBlob:
     begin
-      // Para Blob, retornar True se houver dados (IsNull check)
       try
-        BlobData := TBytes(PValue^);
+        // PValue is Pointer, we need to cast to PBytes to dereference properly
+        BlobData := PBytes(PValue)^;
         if Length(BlobData) > 0 then
         begin
           Value := True;
@@ -1773,7 +1860,9 @@ begin
           Exit;
         end;
       except
+        // Safety for invalid pointers during stress/navigation
       end;
+      Result := False;
       Exit;
     end;
   else
@@ -1892,6 +1981,7 @@ var
   P: PByte;
 begin
   if not Assigned(Field) then Exit;
+  if Field.ReadOnly or (State = dsBrowse) then Exit;
   
   if Field.FieldKind in [fkCalculated, fkLookup, fkInternalCalc] then
   begin
@@ -1983,6 +2073,29 @@ begin
        Inc(P, PropMap.FieldOffset);
        PBoolean(P)^ := (Buffer <> nil);
     end;
+    SetModified(True);
+    DataEvent(deFieldChange, NativeInt(Field));
+  end
+  else if (CurrentObj <> nil) then
+  begin
+    // RTTI Fallback for properties without direct FieldOffset
+    var V: TValue := TValue.Empty;
+    if Buffer <> nil then
+    begin
+       case Field.DataType of
+         ftString, ftWideString: V := string(PWideChar(Buffer));
+         ftInteger, ftSmallint, ftAutoInc: V := PInteger(Buffer)^;
+         ftLargeint: V := PInt64(Buffer)^;
+         ftFloat, ftCurrency: V := PDouble(Buffer)^;
+         ftBoolean: V := PBoolean(Buffer)^;
+         ftDateTime, ftDate, ftTime: V := TDateTime(PDouble(Buffer)^);
+       end;
+    end;
+
+    var RttiProp := GetProperty(Field.FieldName);
+    if RttiProp <> nil then
+      RttiProp.SetValue(CurrentObj, V);
+      
     SetModified(True);
     DataEvent(deFieldChange, NativeInt(Field));
   end;

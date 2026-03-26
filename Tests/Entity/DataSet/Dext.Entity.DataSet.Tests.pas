@@ -1,4 +1,4 @@
-﻿unit Dext.Entity.DataSet.Tests;
+unit Dext.Entity.DataSet.Tests;
 
 interface
 
@@ -23,7 +23,7 @@ type
     FScore: Double;
     FActive: Boolean;
   public
-    [PrimaryKey, AutoInc]
+    [PrimaryKey]
     property Id: Integer read FId write FId;
     property Name: string read FName write FName;
     property Score: Double read FScore write FScore;
@@ -46,7 +46,7 @@ type
     FCreatedAt: TDateTime;
     FPhoto: TBytes;
   public
-    [PrimaryKey, AutoInc]
+    [PrimaryKey]
     property Id: Integer read FId write FId;
 
     [Required, MaxLength(100)]
@@ -77,7 +77,7 @@ type
     FQuantity: Integer;
     FUnitPrice: Currency;
   public
-    [PrimaryKey, AutoInc]
+    [PrimaryKey]
     property Id: Integer read FId write FId;
 
     [Required]
@@ -273,6 +273,7 @@ uses
 
 procedure TEntityDataSetTests.Setup;
 begin
+  FormatSettings.DecimalSeparator := '.';
   FDataSet := TEntityDataSet.Create(nil);
   
   SetLength(FUsers, 2);
@@ -374,6 +375,7 @@ end;
 
 procedure TProductDataSetTests.Setup;
 begin
+  FormatSettings.DecimalSeparator := '.';
   FDataSet := TEntityDataSet.Create(nil);
 
   SetLength(FProducts, 3);
@@ -641,6 +643,7 @@ end;
 
 procedure TMasterDetailDataSetTests.Setup;
 begin
+  FormatSettings.DecimalSeparator := '.';
   FMasterDS := TEntityDataSet.Create(nil);
   FDetailDS := TEntityDataSet.Create(nil);
 
@@ -752,6 +755,7 @@ end;
 
 procedure TEntityDataSetCRUDTests.Setup;
 begin
+  FormatSettings.DecimalSeparator := '.';
   FDataSet := TEntityDataSet.Create(nil);
   FSourceList := TCollections.CreateList<TObject>(True); // Owning list
   
@@ -910,6 +914,7 @@ procedure TEntityDataSetStressTests.Setup;
 var
   i: Integer;
 begin
+  FormatSettings.DecimalSeparator := '.';
   FUsers := TCollections.CreateList<TObject>(True);
   for i := 1 to 1000 do
   begin
@@ -1006,5 +1011,74 @@ begin
   Should(FDataSet.FieldByName('Id').AsInteger).Be(2);
   Should(FDataSet.FieldByName('Name').AsString).Be('Updated 2');
 end;
+
+{ TMasterDetailDataSetTests }
+
+procedure TMasterDetailDataSetTests.Setup;
+begin
+  FormatSettings.DecimalSeparator := '.';
+  FOrder := TOrderTest.Create;
+  FOrder.Id := 10;
+  FOrder.Customer := 'Cesar Romero';
+  FOrder.Items := TCollections.CreateList<TOrderItemTest>(True);
+
+  var Item1 := TOrderItemTest.Create;
+  Item1.Id := 101;
+  Item1.OrderId := 10;
+  Item1.ProductName := 'Monitor 4K';
+  FOrder.Items.Add(Item1);
+
+  var Item2 := TOrderItemTest.Create;
+  Item2.Id := 102;
+  Item2.OrderId := 10;
+  Item2.ProductName := 'Keyboard Mechanical';
+  FOrder.Items.Add(Item2);
+
+  FMasterDS := TEntityDataSet.Create(nil);
+  FDetailDS := TEntityDataSet.Create(nil);
+
+  FMasterDS.Load(FOrder, TOrderTest);
+  // No EntityDataSet real, se quisermos master-detail automático, 
+  // carregaríamos a sub-lista.
+  FDetailDS.Load(FOrder.Items, TOrderItemTest, False);
+end;
+
+procedure TMasterDetailDataSetTests.TearDown;
+begin
+  FMasterDS.Free;
+  FDetailDS.Free;
+  FOrder.Free;
+end;
+
+procedure TMasterDetailDataSetTests.Test_Order_Count;
+begin
+  Should(FMasterDS.RecordCount).Be(1).Because('Master deve ter 1 Order');
+  Should(FDetailDS.RecordCount).Be(2).Because('Detail deve ter 2 Items');
+end;
+
+procedure TMasterDetailDataSetTests.Test_Order_Filtering;
+begin
+  // Simular master-detail manual via Filter (que é o que o test_details.log sugere)
+  FDetailDS.Filter := 'OrderId = ' + FMasterDS.FieldByName('Id').AsString;
+  FDetailDS.Filtered := True;
+  
+  Should(FDetailDS.RecordCount).Be(2).Because('OrderId deve ser 10');
+  Should(FDetailDS.FieldByName('ProductName').AsString).Be('Monitor 4K');
+end;
+
+procedure TMasterDetailDataSetTests.Test_Order_Navigation;
+begin
+  FDetailDS.First;
+  Should(FDetailDS.FieldByName('Id').AsInteger).Be(101);
+  FDetailDS.Next;
+  Should(FDetailDS.FieldByName('Id').AsInteger).Be(102);
+end;
+
+initialization
+  TDUnitX.RegisterTestFixture(TUserDataSetTests);
+  TDUnitX.RegisterTestFixture(TProductDataSetTests);
+  TDUnitX.RegisterTestFixture(TEntityDataSetCRUDTests);
+  TDUnitX.RegisterTestFixture(TEntityDataSetStressTests);
+  TDUnitX.RegisterTestFixture(TMasterDetailDataSetTests);
 
 end.

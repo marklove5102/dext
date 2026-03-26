@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -39,6 +39,7 @@ uses
   Dext.Entity.Attributes,
   Dext.Entity.TypeConverters,
   Dext.Core.SmartTypes,
+  Dext.Core.Reflection,
   Dext.Specifications.Interfaces;
 
 type
@@ -382,9 +383,7 @@ type
 implementation
 
 uses
-  Dext.Core.Reflection;
-
-{ TEntityMap }
+  System.StrUtils;
 
 constructor TEntityMap.Create(AEntityType: PTypeInfo);
 begin
@@ -443,7 +442,7 @@ begin
       if FieldAttribute(AAttr).Name <> '' then
         APropMap.FieldName := FieldAttribute(AAttr).Name
       else
-        APropMap.FieldName := 'F' + APropMap.PropertyName;
+        APropMap.FieldName := TReflection.NormalizeFieldName(APropMap.PropertyName);
     end;
     if AAttr is PrimaryKeyAttribute then 
     begin
@@ -565,23 +564,28 @@ begin
       
       if IsSmart then
       begin
-        var FldName := Fld.Name;
-        if (FldName.Length > 1) and (FldName[1] = 'F') then
-          FldName := FldName.Substring(1);
+        var FldName := TReflection.NormalizeFieldName(Fld.Name);
           
         PropMap := GetOrAddProperty(FldName);
         PropMap.FieldOffset := -1; // Reset to avoid incorrect null detection for records
         PropMap.FieldValueOffset := -1;
 
-        for var InnerFld in Fld.FieldType.GetFields do
+        if Fld.FieldType.Name.Contains('Lazy<') then
+          PropMap.IsLazy := True;
+
+        // Skip fast path for Lazy to force RTTI (which triggers Load)
+        if not PropMap.IsLazy then
         begin
-          if SameText(InnerFld.Name, 'FHasValue') or SameText(InnerFld.Name, 'FLoaded') then
-            PropMap.FieldOffset := Fld.Offset + InnerFld.Offset
-          else if SameText(InnerFld.Name, 'FValue') then
+          for var InnerFld in Fld.FieldType.GetFields do
           begin
-            PropMap.FieldValueOffset := Fld.Offset + InnerFld.Offset;
-            PropMap.PropertyType := InnerFld.FieldType.Handle;
-            PropMap.DataType := TypeInfoToFieldType(InnerFld.FieldType.Handle);
+            if SameText(InnerFld.Name, 'FHasValue') or SameText(InnerFld.Name, 'FLoaded') then
+              PropMap.FieldOffset := Fld.Offset + InnerFld.Offset
+            else if SameText(InnerFld.Name, 'FValue') then
+            begin
+              PropMap.FieldValueOffset := Fld.Offset + InnerFld.Offset;
+              PropMap.PropertyType := InnerFld.FieldType.Handle;
+              PropMap.DataType := TypeInfoToFieldType(InnerFld.FieldType.Handle);
+            end;
           end;
         end;
         
@@ -647,7 +651,7 @@ begin
       // Try to find the backing field by convention (FPropName) if offset is not set
       if PropMap.FieldValueOffset <= 0 then
       begin
-        var BackingFld := Typ.GetField('F' + Prop.Name);
+        var BackingFld := Typ.GetField(TReflection.NormalizeFieldName(Prop.Name));
         if BackingFld <> nil then
         begin
            // If the backing field is a SmartProp, we need to extract the inner offset
@@ -656,21 +660,27 @@ begin
              var Meta := TReflection.GetMetadata(BackingFld.FieldType.Handle);
                 if Meta.IsSmartProp then
                 begin
+                  // Detect Lazy
+                  if Meta.RttiType.Name.Contains('Lazy<') then
+                    PropMap.IsLazy := True;
+
                   // Lazy types store an interface (ILazy), not the value T directly in the record.
                   // We MUST NOT set FieldValueOffset for them if we want to support direct memory access for T.
                   // Instead, we skip direct offset mapping so the engine falls back to RTTI (which handles ILazy).
-                  if not string(Meta.RttiType.Handle.Name).Contains('Lazy<') then
+                  if not PropMap.IsLazy then
+                  begin
                     PropMap.FieldValueOffset := BackingFld.Offset + Meta.ValueField.Offset;
 
-                  if Meta.HasValueField <> nil then
-                    PropMap.FieldOffset := BackingFld.Offset + Meta.HasValueField.Offset;
+                    if Meta.HasValueField <> nil then
+                      PropMap.FieldOffset := BackingFld.Offset + Meta.HasValueField.Offset;
+                  end;
                   
                   PropMap.PropertyType := Meta.InnerType;
-              // Update FieldOffset if not yet set
-              if PropMap.FieldValueOffset <= 0 then
-                PropMap.FieldValueOffset := BackingFld.Offset;
+                  // Update FieldOffset if not yet set
+                  if PropMap.FieldValueOffset <= 0 then
+                    PropMap.FieldValueOffset := BackingFld.Offset;
 
-              PropMap.Prop := Prop;
+                  PropMap.Prop := Prop;
                 end;
            end
            else
@@ -1193,7 +1203,7 @@ end;
 
 function TPropertyBuilder<T>.UseField: IPropertyBuilder<T>;
 begin
-  FPropMap.FieldName := 'F' + FPropMap.PropertyName;
+  FPropMap.FieldName := TReflection.NormalizeFieldName(FPropMap.PropertyName);
   Result := Self;
 end;
 

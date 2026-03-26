@@ -28,7 +28,7 @@ type
     FScore: Double;
     FActive: Boolean;
   public
-    [PrimaryKey, AutoInc]
+    [PrimaryKey]
     property Id: Integer read FId write FId;
     property Name: string read FName write FName;
     property Score: Double read FScore write FScore;
@@ -96,6 +96,37 @@ type
 
     [Required]
     property UnitPrice: Currency read FUnitPrice write FUnitPrice;
+  end;
+
+  // =========================================================================
+  //  Entity with Smart Properties for mapping tests
+  // =========================================================================
+  TTestSmartEntity = class
+  private
+    FId: Integer;
+    FLazyDescription: Lazy<string>;
+    FPropPrice: Prop<Double>;
+    FNullableAge: Nullable<Integer>;
+  public
+    [PrimaryKey, AutoInc]
+    property Id: Integer read FId write FId;
+    property Description: Lazy<string> read FLazyDescription write FLazyDescription;
+    property Price: Prop<Double> read FPropPrice write FPropPrice;
+    property Age: Nullable<Integer> read FNullableAge write FNullableAge;
+  end;
+
+  [TestFixture('TEntityDataSet Smart Properties')]
+  TSmartPropertyDataSetTests = class
+  private
+    FDataSet: TEntityDataSet;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_Smart_Fields_Naming_And_Types;
   end;
 
   // =========================================================================
@@ -936,6 +967,41 @@ begin
   finally
     U.Free;
   end;
+end;
+
+{ TSmartPropertyDataSetTests }
+
+procedure TSmartPropertyDataSetTests.Setup;
+begin
+  FDataSet := TEntityDataSet.Create(nil);
+  FDataSet.Load<TTestSmartEntity>(TArray<TTestSmartEntity>.Create());
+end;
+
+procedure TSmartPropertyDataSetTests.TearDown;
+begin
+  FDataSet.Free;
+end;
+
+procedure TSmartPropertyDataSetTests.Test_Smart_Fields_Naming_And_Types;
+var
+  LField: TField;
+begin
+  FDataSet.Open;
+  
+  // Verify Description (Lazy<string> -> ftWideString)
+  LField := FDataSet.FindField('Description');
+  Should(LField).NotBeNull;
+  Should(LField.DataType).Be(ftWideString);
+
+  // Verify Price (Prop<Double> -> ftFloat)
+  LField := FDataSet.FindField('Price');
+  Should(LField).NotBeNull;
+  Should(LField.DataType).Be(ftFloat);
+
+  // Verify Age (Nullable<Integer> -> ftInteger)
+  LField := FDataSet.FindField('Age');
+  Should(LField).NotBeNull;
+  Should(LField.DataType).Be(ftInteger);
 end;
 
 end.

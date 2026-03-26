@@ -1,4 +1,4 @@
-unit Dext.Core.Reflection;
+﻿unit Dext.Core.Reflection;
 
 interface
 
@@ -6,6 +6,8 @@ uses
   System.Rtti,
   System.SysUtils,
   System.TypInfo,
+  System.StrUtils,
+  System.Character,
   Dext.Collections,
   Dext.Collections.Dict,
   Dext.Types.Lazy;
@@ -31,12 +33,13 @@ type
   /// </summary>
   TTypeMetadata = class
   public
-    RttiType: TRttiType;
-    IsSmartProp: Boolean;
-    IsNullable: Boolean;
-    ValueField: TRttiField;
-    HasValueField: TRttiField;
     InnerType: PTypeInfo;
+    IsLazy: Boolean;
+    IsNullable: Boolean;
+    IsSmartProp: Boolean;
+    HasValueField: TRttiField;
+    RttiType: TRttiType;
+    ValueField: TRttiField;
     constructor Create(AType: PTypeInfo);
   end;
 
@@ -57,6 +60,7 @@ type
     class function TryWrapProp(var ADest: TValue; const ASource: TValue): Boolean; static;
     class function CreateInstance(AClass: TClass): TObject; static;
     class function GetFieldPtr(Instance: TObject; const FieldName: string): Pointer; static;
+    class function NormalizeFieldName(const AFieldName: string): string; static;
     class property Context: TRttiContext read FContext;
   end;
 
@@ -119,10 +123,15 @@ begin
       end
       else if LFieldName.ToLower.Contains('hasvalue') then
         HasValueField := Field
-      else if SameText(LFieldName, 'FInstance') and (Field.FieldType.Handle = TypeInfo(ILazy)) then
+      else if SameText(LFieldName, 'FInstance') and (string(Field.FieldType.Handle.Name).Contains('ILazy')) then
       begin
-        IsSmartProp := True;
+        IsLazy := True;
         ValueField := Field;
+        var valueTypeMethod := Field.FieldType.GetMethods('GetValueType');
+        if valueTypeMethod <> nil then
+        begin
+          var vt := valueTypeMethod.Invoke())
+        end;
       end;
     end;
 
@@ -130,33 +139,89 @@ begin
     if not IsSmartProp then
     begin
       var LTypeName := string(RttiType.Handle.Name);
-      if LTypeName.Contains('Prop<') or LTypeName.Contains('Nullable<') or 
-         LTypeName.Contains('Lazy<') or LTypeName.Contains('TProp<') or
-         LTypeName.Contains('PropType') then
+      if (LTypeName.Contains('Prop<') or LTypeName.Contains('Nullable<') or
+         // LTypeName.Contains('Lazy<') or LTypeName.Contains('TProp<') or
+         LTypeName.Contains('Proxy<') or LTypeName.Contains('TProxy<') or
+         LTypeName.Contains('PropType')) then //and
+//         (not LTypeName.StartsWith('ILazy')) and
+//         (not LTypeName.StartsWith('TLazy')) then
       begin
         IsSmartProp := True;
         
         // Tenta encontrar o campo por convenção se o GetFields falhou
         if ValueField = nil then
           ValueField := RttiType.GetField('FValue');
+//        if ValueField = nil then
+//          ValueField := RttiType.GetField('FInstance');
         if ValueField = nil then
-          ValueField := RttiType.GetField('FInstance');
+          ValueField := RttiType.GetField('FProxy'); // Added for Proxy<T>
         if ValueField = nil then
           ValueField := RttiType.GetField('Value');
       end;
     end;
 
+//    if (InnerType = nil) and IsLazy then
+//    begin
+//      for var p in RttiType.GetProperties do
+//      begin
+//        if p.Name = 'Value' then
+//          InnerType := p.PropertyType.Handle;
+//        WriteLn('[DEBUG] Property ', p.PropertyType.Name)
+//      end;
+//    end;
+
     // Se não encontrou o tipo interno via campos/propriedades, tenta via nome (último recurso)
     if (InnerType = nil) and IsSmartProp then
     begin
-      var LTypeName := string(RttiType.Handle.Name);
-      if LTypeName.Contains('<') and LTypeName.EndsWith('>') then
+      // Try 'Value' property first (e.g. Lazy<T>, Nullable<T>)
+      var LValueProp := RttiType.GetProperty('Value');
+      if LValueProp <> nil then
+        InnerType := LValueProp.PropertyType.Handle;
+
+      if (InnerType = nil) and (ValueField <> nil) then
+        InnerType := ValueField.FieldType.Handle;
+
+      if InnerType = nil then
       begin
-        // Tenta extrair o tipo do nome genérico: Nome<T>
+        var LTypeName := string(RttiType.Handle.Name);
+        if LTypeName.Contains('<') and LTypeName.EndsWith('>') then
+        begin
+          // Tenta extrair o tipo do nome genérico: Nome<T>
+          var LTMark := LTypeName.IndexOf('<');
+          var LInnerTypeName := LTypeName.Substring(LTMark + 1, LTypeName.Length - LTMark - 2);
+          
+          // Tenta encontrar o tipo via contexto RTTI
+          var LInnerRtti := TReflection.Context.FindType(LInnerTypeName);
+          if LInnerRtti = nil then
+            LInnerRtti := TReflection.Context.FindType('System.' + LInnerTypeName);
+            
+          if LInnerRtti <> nil then
+            InnerType := LInnerRtti.Handle;
+
+          // Map common simple types if FindType fails
+          if InnerType = nil then
+          begin
+            if SameText(LInnerTypeName, 'Integer') or SameText(LInnerTypeName, 'System.Integer') then InnerType := TypeInfo(Integer)
+            else if SameText(LInnerTypeName, 'string') or SameText(LInnerTypeName, 'System.string') then InnerType := TypeInfo(string)
+            else if SameText(LInnerTypeName, 'Boolean') or SameText(LInnerTypeName, 'System.Boolean') then InnerType := TypeInfo(Boolean)
+            else if SameText(LInnerTypeName, 'Double') or SameText(LInnerTypeName, 'System.Double') then InnerType := TypeInfo(Double)
+            else if SameText(LInnerTypeName, 'TDateTime') or SameText(LInnerTypeName, 'System.TDateTime') then InnerType := TypeInfo(TDateTime)
+            else if SameText(LInnerTypeName, 'Currency') or SameText(LInnerTypeName, 'System.Currency') then InnerType := TypeInfo(Currency)
+            else if SameText(LInnerTypeName, 'Int64') or SameText(LInnerTypeName, 'System.Int64') then InnerType := TypeInfo(Int64);
+          end;
+        end;
+      end;
+    end;
+  end
+  else if (RttiType <> nil) and (RttiType.TypeKind = tkInterface) then
+  begin
+    var LTypeName := string(RttiType.Handle.Name);
+    if LTypeName.Contains('ILazy<') then
+    begin
+        IsSmartProp := True;
         var LTMark := LTypeName.IndexOf('<');
         var LInnerTypeName := LTypeName.Substring(LTMark + 1, LTypeName.Length - LTMark - 2);
         
-        // Tenta encontrar o tipo via contexto RTTI
         var LInnerRtti := TReflection.Context.FindType(LInnerTypeName);
         if LInnerRtti = nil then
           LInnerRtti := TReflection.Context.FindType('System.' + LInnerTypeName);
@@ -164,18 +229,14 @@ begin
         if LInnerRtti <> nil then
           InnerType := LInnerRtti.Handle;
 
-        // Map common simple types if FindType fails (sometimes it does for basic types)
         if InnerType = nil then
         begin
-          if SameText(LInnerTypeName, 'Integer') then InnerType := TypeInfo(Integer)
-          else if SameText(LInnerTypeName, 'string') then InnerType := TypeInfo(string)
-          else if SameText(LInnerTypeName, 'Boolean') then InnerType := TypeInfo(Boolean)
-          else if SameText(LInnerTypeName, 'Double') then InnerType := TypeInfo(Double)
-          else if SameText(LInnerTypeName, 'TDateTime') then InnerType := TypeInfo(TDateTime)
-          else if SameText(LInnerTypeName, 'Currency') then InnerType := TypeInfo(Currency)
-          else if SameText(LInnerTypeName, 'Int64') then InnerType := TypeInfo(Int64);
+          if SameText(LInnerTypeName, 'Integer') or SameText(LInnerTypeName, 'System.Integer') then InnerType := TypeInfo(Integer)
+          else if SameText(LInnerTypeName, 'string') or SameText(LInnerTypeName, 'System.string') then InnerType := TypeInfo(string)
+          else if SameText(LInnerTypeName, 'Boolean') or SameText(LInnerTypeName, 'System.Boolean') then InnerType := TypeInfo(Boolean)
+          else if SameText(LInnerTypeName, 'Double') or SameText(LInnerTypeName, 'System.Double') then InnerType := TypeInfo(Double)
+          else if SameText(LInnerTypeName, 'TDateTime') or SameText(LInnerTypeName, 'System.TDateTime') then InnerType := TypeInfo(TDateTime);
         end;
-      end;
     end;
   end;
 end;
@@ -321,6 +382,8 @@ end;
 class function TReflection.GetUnderlyingType(AType: PTypeInfo): PTypeInfo;
 begin
   Result := GetMetadata(AType).InnerType;
+  if Result = nil then
+    Result := AType;
 end;
 
 class function TReflection.TryUnwrapProp(const ASource: TValue; var ADest: TValue): Boolean;
@@ -437,6 +500,25 @@ begin
     Result := PByte(Instance) + RField.Offset
   else
     Result := nil;
+end;
+
+class function TReflection.NormalizeFieldName(const AFieldName: string): string;
+begin
+  Result := AFieldName;
+  
+  // Remove 'F' prefix if it exists
+  if (Result.Length > 1) and (Result[1] = 'F') and (Char.IsUpper(Result, 2)) then
+    Result := Result.Substring(1);
+
+  // Normalize Smart Property prefixes: Lazy, Prop, Proxy, Nullable
+  if Result.StartsWith('Lazy', True) and (Result.Length > 4) and (Char.IsUpper(Result, 5)) then
+    Result := Result.Substring(4)
+  else if Result.StartsWith('Prop', True) and (Result.Length > 4) and (Char.IsUpper(Result, 5)) then
+    Result := Result.Substring(4)
+  else if Result.StartsWith('Proxy', True) and (Result.Length > 5) and (Char.IsUpper(Result, 6)) then
+    Result := Result.Substring(5)
+  else if Result.StartsWith('Nullable', True) and (Result.Length > 8) and (Char.IsUpper(Result, 9)) then
+    Result := Result.Substring(8);
 end;
 
 end.
