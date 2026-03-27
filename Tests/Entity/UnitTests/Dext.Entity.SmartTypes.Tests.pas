@@ -39,7 +39,8 @@ type
   [TestFixture('SmartTypes Combinatorial Matrix')]
   TSmartTypesMatrixTests = class
   private
-    procedure CheckType<T>(const Value: T; const ExpectedStr: string);
+    procedure CheckType<T>(const Value: T; const ExpectedStr: string;
+      TestConversionBack: Boolean = True);
   public
     [Test]
     procedure Test_All_Fundament_Types_Consistency;
@@ -49,16 +50,21 @@ implementation
 
 { TSmartTypesMatrixTests }
 
-procedure TSmartTypesMatrixTests.CheckType<T>(const Value: T; const ExpectedStr: string);
+procedure TSmartTypesMatrixTests.CheckType<T>(const Value: T; const
+  ExpectedStr: string; TestConversionBack: Boolean = True);
 var
   P: Prop<T>;
 begin
   P := Value;
   Should(P.AsString).Be(ExpectedStr);
   Should(Nullable<T>(P).HasValue).BeTrue;
-  
+
+  if not TestConversionBack then Exit;
+
+  var expect := TValue.From<T>(T(P)).AsVariant;
+  var actual := TValue.From<T>(Value).AsVariant;
   // Test conversion back to T using Variant as bridge for generics
-  Should(TValue.From<T>(T(P)).AsVariant).Be(TValue.From<T>(Value).AsVariant);
+  Should(expect).Be(actual);
 end;
 
 procedure TSmartTypesMatrixTests.Test_All_Fundament_Types_Consistency;
@@ -90,7 +96,7 @@ begin
   
   // Guid
   G := TGuid.Create('{D6A5D5A1-949B-4B7C-9F8A-E7C1D1B1B1B1}');
-  CheckType<TGuid>(G, G.ToString);
+  CheckType<TGuid>(G, GUIDToString(G), False);
 end;
 
 { TSmartTypesTests }

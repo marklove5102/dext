@@ -401,10 +401,22 @@ begin
     Result := Converter.Convert(AValue, ATargetType)
   else
   begin
-    // Fallback 1: Target is String (use TValue.ToString which is very robust)
+    // Fallback 1: Target is String
     if ATargetType.Kind in [tkString, tkUString, tkWString] then
     begin
-       Result := AValue.ToString;
+       // Handle special types that TValue.ToString doesn't handle well
+       if AValue.TypeInfo = TypeInfo(TDateTime) then
+         Result := DateTimeToStr(AValue.AsType<TDateTime>)
+       else if AValue.TypeInfo = TypeInfo(TDate) then
+         Result := DateToStr(AValue.AsType<TDate>)
+       else if AValue.TypeInfo = TypeInfo(TTime) then
+         Result := TimeToStr(AValue.AsType<TTime>)
+       else if AValue.TypeInfo = TypeInfo(TGUID) then
+         Result := GUIDToString(AValue.AsType<TGUID>)
+       else if AValue.TypeInfo = TypeInfo(TUUID) then
+         Result := AValue.AsType<TUUID>.ToString
+       else
+         Result := AValue.ToString;
        Exit;
     end;
 
@@ -844,7 +856,14 @@ end;
 
 function TFloatToStringConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
 begin
-  Result := FloatToStr(AValue.AsExtended, TFormatSettings.Invariant);
+  if AValue.TypeInfo = TypeInfo(TDateTime) then
+    Result := DateTimeToStr(AValue.AsType<TDateTime>)
+  else if AValue.TypeInfo = TypeInfo(TDate) then
+    Result := DateToStr(AValue.AsType<TDate>)
+  else if AValue.TypeInfo = TypeInfo(TTime) then
+    Result := TimeToStr(AValue.AsType<TTime>)
+  else
+    Result := FloatToStr(AValue.AsExtended, TFormatSettings.Invariant);
 end;
 
 { TIntegerToStringConverter }

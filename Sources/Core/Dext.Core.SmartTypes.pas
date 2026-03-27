@@ -603,12 +603,15 @@ end;
 
 function Prop<T>.AsString: string;
 begin
-  Result := string(Self);
+  if IsQueryMode then
+    Result := Name
+  else
+    Result := TValueConverter.Convert<string>(TValue.From<T>(FValue));
 end;
 
 function Prop<T>.ToString: string;
 begin
-  Result := string(Self);
+  Result := AsString;
 end;
 
 function Prop<T>.AsInteger: Integer;
