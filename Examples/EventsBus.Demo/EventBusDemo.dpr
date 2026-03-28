@@ -22,6 +22,7 @@ uses
   System.SysUtils,
   System.Threading,
   Dext,                    // TDextServices, IServiceProvider
+  Dext.Utils,
   Dext.Events,             // facade
   Dext.Events.Extensions,  // AddEventBus, AddEventHandler, etc.
   Dext.Events.Interfaces,  // IEventBus, TEventBusExtensions
@@ -333,7 +334,7 @@ begin
   try
     WriteLn('');
     WriteLn('╔══════════════════════════════════════════════════════════════╗');
-    WriteLn('║         Dext Framework — Event Bus Demo                     ║');
+    WriteLn('║         Dext Framework — Event Bus Demo                      ║');
     WriteLn('╚══════════════════════════════════════════════════════════════╝');
 
     Demo1_Basic;
@@ -357,5 +358,5 @@ begin
 
   WriteLn;
   Write('Press Enter to exit...');
-  ReadLn;
+  ConsolePause;
 end.

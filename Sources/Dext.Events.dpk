@@ -25,7 +25,7 @@ package Dext.Events;
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'Dext Framework - Event Bus (in-process pub/sub with DI integration)'}
+{$DESCRIPTION 'Dext Framework - Event Bus'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 

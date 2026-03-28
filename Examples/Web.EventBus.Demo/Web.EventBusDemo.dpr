@@ -57,14 +57,12 @@ begin
     App.UseStartup(TStartup.Create);
     App.Run(8080);
 
-    ConsolePause;
     WriteLn('[OK] Server stopped.');
-
   except
     on E: Exception do
     begin
       WriteLn('[ERROR] ', E.Message);
-      ConsolePause;
     end;
   end;
+  ConsolePause;
 end.
