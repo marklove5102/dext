@@ -1,4 +1,4 @@
-﻿program Dext.Entity.UnitTests;
+program Dext.Entity.UnitTests;
 
 {$APPTYPE CONSOLE}
 
@@ -14,7 +14,8 @@ uses
   Dext.Entity.DataSet.Tests in 'Dext.Entity.DataSet.Tests.pas',
   Dext.Entity.Async.Tests in 'Dext.Entity.Async.Tests.pas',
   Dext.Entity.SqlGenerator.Tests in 'Dext.Entity.SqlGenerator.Tests.pas',
-  Dext.Entity.FluentMapping.Tests in 'Dext.Entity.FluentMapping.Tests.pas';
+  Dext.Entity.FluentMapping.Tests in 'Dext.Entity.FluentMapping.Tests.pas',
+  Dext.Entity.DataSet.NewFeatures.Tests in 'Dext.Entity.DataSet.NewFeatures.Tests.pas';
 
 begin
   SetConsoleCharSet();
@@ -38,13 +39,9 @@ begin
         TCalculatedFieldsTests,
         TSmartTypesTests,
         TSmartTypesMatrixTests,
-        TEntityDataSetTests,
-        TProductDataSetTests,
-        TMasterDetailDataSetTests,
-        TEntityDataSetCRUDTests,
-        TEntityDataSetStressTests,
         TSmartPropertyDataSetTests,
-        TFloatingPointDataSetTests
+        TFloatingPointDataSetTests,
+        TEntityDataSetFeaturesTests
       ]).Run;
 
     TTest.SetExitCode(TestResult);
