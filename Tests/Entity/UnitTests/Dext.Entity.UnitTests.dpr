@@ -34,6 +34,7 @@ begin
         TEntityDataSetTests,
         TProductDataSetTests,
         TMasterDetailDataSetTests,
+        TNativeMasterDetailTests,
         TEntityDataSetStressTests,
         TDataSetSmartTypesTests,
         TShadowDataSetTests,

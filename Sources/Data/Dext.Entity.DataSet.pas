@@ -71,6 +71,7 @@ type
     FIsAppending: Boolean;
     FPositionBeforeAction: Integer;
     FCalcOffsets: TDictionary<string, Integer>;
+    FDetailDataSets: TDictionary<string, TDataSet>;
     FCalcAreaSize: Integer;
     FInternalCalcStorage: TArray<TBytes>;
     FPropertyCache: TDictionary<string, TRttiProperty>;
@@ -99,6 +100,8 @@ type
     procedure InternalOpen; override;
     procedure InternalClose; override;
     procedure InternalInitFieldDefs; override;
+    procedure SyncDetailData(const AFieldName: string; ADetailDataSet: TDataSet);
+    function CreateNestedDataSet(DataSetField: TDataSetField): TDataSet; override;
 
     // Buffer Alocations
     function AllocRecordBuffer: TRecordBuffer; override;
@@ -314,15 +317,17 @@ begin
   FPositionBeforeAction := -2;
   FCalcOffsets := TDictionary<string, Integer>.Create;
   FPropertyCache := TDictionary<string, TRttiProperty>.Create;
+  FDetailDataSets := TDictionary<string, TDataSet>.Create;
 end;
 
 destructor TEntityDataSet.Destroy;
 begin
+  FPropertyCache.Free;
   FCalcOffsets.Free;
+  FDetailDataSets.Free;
+  
   if Assigned(FInsertObj) then
     FInsertObj.Free;
-    
-  FPropertyCache.Free;
     
   if FOwnsItems then
     FItems := nil; // IList cuidará da liberação se for o caso
@@ -458,7 +463,10 @@ begin
     end;
   end;
   
-  Active := True; // Chama Open -> InternalOpen e prepara buffers
+  if Active then
+    Refresh
+  else
+    Active := True;
 end;
 
 procedure TEntityDataSet.Load(const AItems: TArray<TObject>; AClass: TClass);
@@ -1148,6 +1156,14 @@ begin
   end;
   FIsCursorOpen := False;
   FVirtualIndex.Clear;
+  
+  if (FDetailDataSets <> nil) then
+  begin
+    for var Pair in FDetailDataSets do
+      Pair.Value.Close;
+    FDetailDataSets.Clear;
+  end;
+  
   SetLength(FInternalCalcStorage, 0);
 end;
 
@@ -1296,8 +1312,19 @@ begin
 end;
 
 procedure TEntityDataSet.DoAfterScroll;
+var
+  Pair: TPair<string, TDataSet>;
 begin
   inherited DoAfterScroll;
+  
+  if (FDetailDataSets <> nil) and (FDetailDataSets.Count > 0) then
+  begin
+    for Pair in FDetailDataSets do
+    begin
+        // Only refresh if the detail dataset exists and we logic can update it.
+        SyncDetailData(Pair.Key, Pair.Value);
+    end;
+  end;
 end;
 
 procedure TEntityDataSet.DoBeforeInsert;
@@ -1398,12 +1425,9 @@ procedure TEntityDataSet.InternalInitFieldDefs;
         else
         begin
           var LTypeName := string(ATypeInfo.Name);
-          if LTypeName.Contains('Lazy<') or LTypeName.Contains('Prop<') then
-          begin
-             // Se falhou em resolver via RTTI mas o nome indica Lazy, tenta o fallback manual aqui se necessário
-             // ou pelo menos evita ftUnknown se for uma interface conhecida.
-             // Neste caso, se InnerInfo é nil, é porque o TReflection.GetUnderlyingType falhou para a INTERFACE.
-          end;
+          if (LTypeName.StartsWith('IList<') or LTypeName.StartsWith('IEnumerable<')) then
+            Exit(ftDataSet);
+            
           Exit(ftUnknown);
         end;
       end;
@@ -1596,6 +1620,75 @@ begin
   end;
 end;
 
+procedure TEntityDataSet.SyncDetailData(const AFieldName: string; ADetailDataSet: TDataSet);
+var
+  LObj: TObject;
+  LVal: TValue;
+  LList: IObjectList;
+  LItemClass: TClass;
+begin
+  if not (ADetailDataSet is TEntityDataSet) then Exit;
+
+  // Ensure EntityClass is set (might be first call)
+  if TEntityDataSet(ADetailDataSet).FEntityClass = nil then
+  begin
+    var LProp := GetProperty(AFieldName);
+    if LProp <> nil then
+      TEntityDataSet(ADetailDataSet).FEntityClass := TReflection.GetCollectionItemType(LProp.PropertyType.Handle);
+  end;
+
+  // Now populate it with data from the current record
+  LObj := GetCurrentObject;
+  if LObj <> nil then
+  begin
+    LVal := TReflection.GetValue(LObj, AFieldName);
+    if not LVal.IsEmpty then
+    begin
+      LList := nil;
+      if LVal.IsType<IObjectList> then
+        LList := LVal.AsType<IObjectList>
+      else if LVal.Kind = tkInterface then
+      begin
+        // Try to cast to IObjectList (compatible with TList<T>)
+        var LIntf := LVal.AsInterface;
+        if LIntf <> nil then
+           LIntf.QueryInterface(IObjectList, LList);
+      end;
+
+      if LList <> nil then
+      begin
+        LItemClass := TReflection.GetCollectionItemType(LVal.TypeInfo);
+        if LItemClass <> nil then
+          TEntityDataSet(ADetailDataSet).Load(LList, LItemClass, False);
+      end;
+    end
+    else
+      TEntityDataSet(ADetailDataSet).Load(nil, TEntityDataSet(ADetailDataSet).FEntityClass, False);
+  end
+  else
+    TEntityDataSet(ADetailDataSet).Load(nil, TEntityDataSet(ADetailDataSet).FEntityClass, False);
+end;
+
+function TEntityDataSet.CreateNestedDataSet(DataSetField: TDataSetField): TDataSet;
+begin
+  Result := nil;
+  if DataSetField = nil then Exit;
+
+  // We need a detail dataset instance.
+  // Check our cache first.
+  if not FDetailDataSets.TryGetValue(DataSetField.FieldName, Result) then
+  begin
+    Result := TEntityDataSet.Create(Self);
+    TEntityDataSet(Result).DbContext := FDbContext;
+    TEntityDataSet(Result).IncludeShadowProperties := FIncludeShadowProperties;
+    
+    FDetailDataSets.Add(DataSetField.FieldName, Result);
+  end;
+
+  // Sync data
+  SyncDetailData(DataSetField.FieldName, Result);
+end;
+
 procedure TEntityDataSet.ApplyAttributesToField(AField: TField; AContainer: TRttiObject);
 var
   Attr: TCustomAttribute;
@@ -1615,7 +1708,9 @@ begin
     else if Attr is EditMaskAttribute then
       AField.EditMask := EditMaskAttribute(Attr).Value
     else if Attr is DisplayWidthAttribute then
-      AField.DisplayWidth := DisplayWidthAttribute(Attr).Value;
+      AField.DisplayWidth := DisplayWidthAttribute(Attr).Value
+    else if Attr is VisibleAttribute then
+      AField.Visible := VisibleAttribute(Attr).Visible;
   end;
 end;
 

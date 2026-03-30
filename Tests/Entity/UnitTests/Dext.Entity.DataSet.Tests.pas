@@ -115,6 +115,21 @@ type
     property Age: Nullable<Integer> read FNullableAge write FNullableAge;
   end;
 
+  // =========================================================================
+  //  Order Entity for native master-detail tests
+  // =========================================================================
+  [Table('orders_native')]
+  TOrderTest = class
+  private
+    FId: Integer;
+    FItems: IList<TOrderItemTest>;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    [PrimaryKey] property Id: Integer read FId write FId;
+    [HasMany] property Items: IList<TOrderItemTest> read FItems write FItems;
+  end;
+
   [TestFixture('TEntityDataSet Smart Properties')]
   TSmartPropertyDataSetTests = class
   private
@@ -290,11 +305,30 @@ type
     procedure TearDown;
 
     [Test]
+    procedure Test_Detail_FieldValues;
+
+    [Test]
     procedure Test_Detail_Count;
+
     [Test]
     procedure Test_Detail_FilterByMaster;
+  end;
+
+  [TestFixture('TEntityDataSet Native Master-Detail')]
+  TNativeMasterDetailTests = class
+  private
+    FDataSet: TEntityDataSet;
+    FOrder: TOrderTest;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
     [Test]
-    procedure Test_Detail_FieldValues;
+    procedure Test_Access_Detail_DataSet;
+    [Test]
+    procedure Test_Detail_RecordCount;
   end;
 
   [TestFixture('TEntityDataSet CRUD Operations')]
@@ -1077,6 +1111,67 @@ begin
   // if not handled as ftCurrency.
   FDataSet.Open;
   Should(FDataSet.FieldByName('CurrencyVal').DataType).Be(ftCurrency);
+end;
+
+{ TOrderTest }
+
+constructor TOrderTest.Create;
+begin
+  FItems := TCollections.CreateList<TOrderItemTest>(True);
+end;
+
+destructor TOrderTest.Destroy;
+begin
+  FItems := nil;
+  inherited;
+end;
+
+{ TNativeMasterDetailTests }
+
+procedure TNativeMasterDetailTests.Setup;
+begin
+  FOrder := TOrderTest.Create;
+  FOrder.Id := 1;
+  
+  var Item := TOrderItemTest.Create;
+  Item.Id := 101;
+  Item.ProductName := 'Item 1';
+  FOrder.Items.Add(Item);
+
+  Item := TOrderItemTest.Create;
+  Item.Id := 102;
+  Item.ProductName := 'Item 2';
+  FOrder.Items.Add(Item);
+
+  FDataSet := TEntityDataSet.Create(nil);
+  FDataSet.Load([FOrder], TOrderTest);
+  FDataSet.Open;
+end;
+
+procedure TNativeMasterDetailTests.TearDown;
+begin
+  FDataSet.Free;
+  FOrder.Free;
+end;
+
+procedure TNativeMasterDetailTests.Test_Access_Detail_DataSet;
+var
+  DetailField: TDataSetField;
+begin
+  DetailField := FDataSet.FieldByName('Items') as TDataSetField;
+  Should(DetailField.NestedDataSet).NotBeNull;
+  
+  DetailField.NestedDataSet.Open;
+  Should(DetailField.NestedDataSet.FieldByName('ProductName').AsString).Be('Item 1');
+end;
+
+procedure TNativeMasterDetailTests.Test_Detail_RecordCount;
+var
+  DetailField: TDataSetField;
+begin
+  DetailField := FDataSet.FieldByName('Items') as TDataSetField;
+  DetailField.NestedDataSet.Open;
+  Should(DetailField.NestedDataSet.RecordCount).Be(2);
 end;
 
 end.
