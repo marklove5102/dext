@@ -32,7 +32,6 @@ type
     DBGridProducts: TDBGrid;
     DBNavigator: TDBNavigator;
     DataSource: TDataSource;
-    EntityDataSet: TEntityDataSet;
     procedure FormCreate(Sender: TObject);
   private
     FDataSet: TEntityDataSet;
