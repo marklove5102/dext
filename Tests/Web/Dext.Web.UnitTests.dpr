@@ -1,4 +1,4 @@
-program Dext.Web.UnitTests;
+﻿program Dext.Web.UnitTests;
 
 {$APPTYPE CONSOLE}
 
@@ -11,7 +11,8 @@ uses
   Dext.Testing.Attributes,
   Dext.Testing.Fluent,
   Dext.Utils,
-  Dext.Web.DataApi.Resolver.Tests in 'Dext.Web.DataApi.Resolver.Tests.pas';
+  Dext.Web.DataApi.Resolver.Tests in 'Dext.Web.DataApi.Resolver.Tests.pas',
+  Dext.Web.Json.Tests in 'Dext.Web.Json.Tests.pas';
 
 begin
   SetConsoleCharSet();
@@ -25,7 +26,8 @@ begin
       .Configure
       .Verbose
       .RegisterFixtures([
-        TEntityIdResolverTests
+        TEntityIdResolverTests,
+        TJsonNullableTests
       ]).Run;
 
     TTest.SetExitCode(TestResult);

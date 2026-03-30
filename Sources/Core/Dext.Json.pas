@@ -1096,6 +1096,14 @@ begin
         FieldValue := Unwrapped;
     end;
 
+    // Handle null/empty values (e.g. Nullable without value)
+    if FieldValue.IsEmpty then
+    begin
+      if not FSettings.FIgnoreNullValues then
+        Result.SetNull(FieldName);
+      Continue;
+    end;
+
     HasCustomFormat := False;
     CustomFormat := '';
 
@@ -1286,8 +1294,12 @@ begin
     end;
 
     // Handle null/empty values
-    if FSettings.FIgnoreNullValues and PropValue.IsEmpty then
+    if PropValue.IsEmpty then
+    begin
+      if not FSettings.FIgnoreNullValues then
+        Result.SetNull(PropName);
       Continue;
+    end;
 
     // Serialize based on property type
     case PropValue.TypeInfo.Kind of

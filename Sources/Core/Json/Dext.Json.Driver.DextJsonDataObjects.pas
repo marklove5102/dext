@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -460,11 +460,7 @@ end;
 
 procedure TJsonDataObjectAdapter.SetNull(const Name: string);
 begin
-  // FObj.Types[Name] := jdtNull; // Not supported directly in all versions
-  // Deleting is safest for now if null not explicitly supported
-  // But JDO supports nulls.
-  // FObj.Values[Name].ValueType := jdtNull;
-  // Let's assume we can't easily set null without a helper.
+  FObj.O[Name] := nil;
 end;
 
 { TJsonDataArrayAdapter }
@@ -641,7 +637,7 @@ end;
 
 procedure TJsonDataArrayAdapter.AddNull;
 begin
-  FArr.Add(''); // Hack for now
+  FArr.AddObject(nil);
 end;
 
 { TJsonDataObjectsProvider }
