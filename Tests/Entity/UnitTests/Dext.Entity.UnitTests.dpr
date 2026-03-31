@@ -4,6 +4,7 @@
 
 uses
   Dext.MM,
+  Dext.Core.Debug,
   System.SysUtils,
   Dext.Testing.Runner,
   Dext.Testing.Attributes,
@@ -16,7 +17,8 @@ uses
   Dext.Entity.SqlGenerator.Tests in 'Dext.Entity.SqlGenerator.Tests.pas',
   Dext.Entity.FluentMapping.Tests in 'Dext.Entity.FluentMapping.Tests.pas',
   Dext.Entity.DataSet.NewFeatures.Tests in 'Dext.Entity.DataSet.NewFeatures.Tests.pas',
-  Dext.Entity.IdReturn.Tests in 'Dext.Entity.IdReturn.Tests.pas';
+  Dext.Entity.IdReturn.Tests in 'Dext.Entity.IdReturn.Tests.pas',
+  Dext.Entity.DataSet.Export.Tests in 'Dext.Entity.DataSet.Export.Tests.pas';
 
 begin
   SetConsoleCharSet();
@@ -34,6 +36,7 @@ begin
         TEntityDataSetTests,
         TProductDataSetTests,
         TMasterDetailDataSetTests,
+        TNativeMasterDetailTests,
         TEntityDataSetStressTests,
         TDataSetSmartTypesTests,
         TShadowDataSetTests,
@@ -43,8 +46,9 @@ begin
         TSmartPropertyDataSetTests,
         TFloatingPointDataSetTests,
         TEntityIdReturnTests,
-        TFloatingPointDataSetTests,
-        TEntityDataSetFeaturesTests
+        TEntityDataSetFeaturesTests,
+        TEntityDataSetAutomationTests,
+        TEntityDataSetExportTests
       ]).Run;
 
     TTest.SetExitCode(TestResult);
