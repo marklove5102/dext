@@ -1,4 +1,4 @@
-unit Dext.Entity.DataSet.Tests;
+﻿unit Dext.Entity.DataSet.Tests;
 
 interface
 
@@ -533,14 +533,14 @@ var
   TypedList: IList<TUserTest>;
   U: TUserTest;
 begin
-  TypedList := TCollections.CreateList<TUserTest>(True);
+  TypedList := TCollections.CreateList<TUserTest>(False);
   U := TUserTest.Create;
   U.Name := 'Alex List';
   TypedList.Add(U);
   
   TypedDS := TEntityDataSet.Create(nil);
   try
-    TypedDS.Load<TUserTest>(TypedList);
+    TypedDS.Load<TUserTest>(TypedList, True);
     Should(TypedDS.RecordCount).Be(1);
     Should(TypedDS.FieldByName('Name').AsString).Be('Alex List');
   finally
@@ -758,7 +758,7 @@ begin
   U.Score := 20;
   var Lst: IList<TUserTest> := TCollections.CreateList<TUserTest>(True);
   Lst.Add(U);
-  FDataSet.Load(Lst as IObjectList, TUserTest, False);
+  FDataSet.Load(Lst as IObjectList, TUserTest, True);
   FDataSet.Close;
   
   // Add calculated field manually
@@ -1264,7 +1264,7 @@ end;
 procedure TEntityDataSetAutomationTests.Setup;
 begin
   FMasterDS := TEntityDataSet.Create(nil);
-  FMasterDS.Load<TOrderTest>(TCollections.CreateList<TOrderTest>(True));
+  FMasterDS.Load<TOrderTest>(TCollections.CreateList<TOrderTest>(False), True);
 end;
 
 procedure TEntityDataSetAutomationTests.TearDown;
@@ -1311,7 +1311,7 @@ begin
   LDS := TEntityDataSet.Create(nil);
   try
     // Forcar erro via Append em uma classe com lista nao registrada
-    LDS.Load<TUnregisteredEntity>(TCollections.CreateList<TUnregisteredEntity>(True));
+    LDS.Load<TUnregisteredEntity>(TCollections.CreateList<TUnregisteredEntity>(False), True);
     try
       LDS.Append;
       raise Exception.Create('Should have raised an exception with a Tip');

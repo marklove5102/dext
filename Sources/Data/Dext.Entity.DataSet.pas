@@ -14,7 +14,6 @@ uses
   System.DateUtils,
   Data.DB,
   Dext.Core.DateUtils,
-  Dext.Utils,
   Dext.Collections,
   Dext.Collections.Vector,
   Dext.Collections.Dict,
@@ -358,8 +357,6 @@ begin
   FreeAndNil(FDetailDataSets);
   FreeAndNil(FInsertObj);
     
-  if FOwnsItems then
-    FItems := nil; // IList cuidará da liberação se for o caso
   FItems := nil;
   
   if Assigned(FEntityMap) and FOwnsEntityMap then
@@ -511,18 +508,27 @@ end;
 
 function TEntityDataSet.AsJsonArray: string;
 var
-  FilteredItems: IList<TObject>;
+  Stream: TStringStream;
+  Writer: TUtf8JsonWriter;
   I: Integer;
 begin
   if (FItems = nil) or (FVirtualIndex.Count = 0) then
     Exit('[]');
 
-  // Exportar respeitando filtros e ordenação atuais via FVirtualIndex
-  FilteredItems := TCollections.CreateList<TObject>;
-  for I := 0 to FVirtualIndex.Count - 1 do
-    FilteredItems.Add(FItems[FVirtualIndex[I]]);
-
-  Result := TDextJson.Serialize(TValue.From<IList<TObject>>(FilteredItems));
+  // Refinado para respeitar filtros e ordenação e usar pipeline de streaming (Otimizado)
+  Stream := TStringStream.Create('', TEncoding.UTF8);
+  try
+    Writer := TUtf8JsonWriter.Create(Stream);
+    Writer.WriteStartArray;
+    for I := 0 to FVirtualIndex.Count - 1 do
+    begin
+      Writer.WriteValue(FItems[FVirtualIndex[I]]);
+    end;
+    Writer.WriteEndArray;
+    Result := Stream.DataString;
+  finally
+    Stream.Free;
+  end;
 end;
 
 function TEntityDataSet.AsJsonObject: string;
@@ -556,7 +562,7 @@ var
   i: Integer;
   ListObj: IList<TObject>;
 begin
-  ListObj := TCollections.CreateList<TObject>(False);
+  ListObj := TCollections.CreateList<TObject>(AOwns);
   for i := 0 to AItems.Count - 1 do
     ListObj.Add(TObject(AItems[i]));
   Load(ListObj as IObjectList, AClass, AOwns);

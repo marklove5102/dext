@@ -123,7 +123,7 @@ Para trafegar dados entre camadas (API -> Client) com máxima eficiência.
 - [x] **Fluent Load:** Refinar método `.Load` para suportar diferentes origens de dados de forma transparente.
 - [x] **Entity to Json:** Bridge para exportar dados do DataSet/Entidade para JSON.
 - [x] **Json to Entity:** Bridge para importar dados de JSON diretamente para entidades via DataSet.
-- [ ] **Exportação Otimizada:** Refinar `.AsJsonArray` para respeitar filtros e ordenação ativos no dataset.
+- [x] **Exportação Otimizada:** Refinar `.AsJsonArray` para respeitar filtros e ordenação ativos no dataset. [2026-03-31]
 
 ### 🎨 Fase 6: Experiência Design-Time & IDE
 
