@@ -258,39 +258,25 @@ begin
     Exit(TValue.Empty);
 
   case Field.DataType of
+    ftInteger, ftAutoInc, ftSmallint: Result := TValue.From<Integer>(Field.AsInteger);
+    ftLargeint: Result := TValue.From<Int64>(Field.AsLargeInt);
+    ftFloat: Result := TValue.From<Double>(Field.AsFloat);
+    ftCurrency: Result := TValue.From<Currency>(Field.AsCurrency);
+    ftBoolean: Result := TValue.From<Boolean>(Field.AsBoolean);
     ftDate: Result := TValue.From<TDate>(DateOf(Field.AsDateTime));
     ftTime: Result := TValue.From<TTime>(TimeOf(Field.AsDateTime));
     ftDateTime, ftTimeStamp: Result := TValue.From<TDateTime>(Field.AsDateTime);
     ftBlob, ftOraBlob, ftGraphic: Result := TValue.From<TBytes>(Field.AsBytes);
     ftString, ftWideString, ftMemo, ftWideMemo: Result := TValue.From<string>(Field.AsString);
-    ftGuid:
-      // Return TGUID directly - TypeConverters handle byte-order conversion
-      Result := TValue.From<TGUID>(Field.AsGuid);
-    else
-      Result := TValue.FromVariant(Field.Value);
+    ftGuid: Result := TValue.From<TGUID>(Field.AsGuid);
+  else
+    Result := TValue.FromVariant(Field.Value);
   end;
 end;
 
 function TFireDACReader.GetValue(const AColumnName: string): TValue;
-var
-  Field: TField;
 begin
-  Field := FQuery.FieldByName(AColumnName);
-  if Field.IsNull then
-    Exit(TValue.Empty);
-
-  case Field.DataType of
-    ftDate: Result := TValue.From<TDate>(DateOf(Field.AsDateTime));
-    ftTime: Result := TValue.From<TTime>(TimeOf(Field.AsDateTime));
-    ftDateTime, ftTimeStamp: Result := TValue.From<TDateTime>(Field.AsDateTime);
-    ftBlob, ftOraBlob, ftGraphic: Result := TValue.From<TBytes>(Field.AsBytes);
-    ftString, ftWideString, ftMemo, ftWideMemo: Result := TValue.From<string>(Field.AsString);
-    ftGuid:
-      // Return TGUID directly - TypeConverters handle byte-order conversion
-      Result := TValue.From<TGUID>(Field.AsGuid);
-    else
-      Result := TValue.FromVariant(Field.Value);
-  end;
+  Result := GetValue(FQuery.FieldByName(AColumnName).Index);
 end;
 
 function TFireDACReader.Next: Boolean;

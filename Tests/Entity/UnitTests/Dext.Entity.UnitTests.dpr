@@ -42,7 +42,7 @@ begin
         TEntityDataSetStressTests,
         TEntityDataSetTests,
         TEntityIdReturnTests,
-        TEntityNullableHydrationTests
+        TEntityNullableHydrationTests,
         TFloatingPointDataSetTests,
         TMasterDetailDataSetTests,
         TNativeMasterDetailTests,

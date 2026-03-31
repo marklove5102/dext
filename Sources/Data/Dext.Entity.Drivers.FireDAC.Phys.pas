@@ -226,46 +226,26 @@ end;
 
 function TFireDACPhysReader.GetValue(AColumnIndex: Integer): TValue;
 var
-  Col: TFDDatSColumn;
-  Val: Variant;
+  Data: Variant;
 begin
   if FCurrentRow = nil then
     Exit(TValue.Empty);
-    
-  Col := FTable.Columns[AColumnIndex];
-  // Direct access via Row
-  if VarIsNull(FCurrentRow.GetData(AColumnIndex)) then
+
+  Data := FCurrentRow.GetData(AColumnIndex);
+  if VarIsNull(Data) then
     Exit(TValue.Empty);
 
-  // We can optimize this using FCurrentRow.GetData directly for native types
-  // But Variant is the safest universal bridge for now inside TFDDatSRow.
-  // TFDDatSRow also has GetValue, GetInt64, GetDouble...
-  
-  case Col.DataType of
-    dtInt32, dtInt16, dtByte, dtUInt16, dtSByte: Result := TValue.From<Integer>(Integer(FCurrentRow.GetData(AColumnIndex)));
-    dtInt64, dtUInt32, dtUInt64: Result := TValue.From<Int64>(Int64(FCurrentRow.GetData(AColumnIndex)));
-    dtDouble, dtSingle, dtCurrency, dtBCD, dtFmtBCD: Result := TValue.From<Double>(Double(FCurrentRow.GetData(AColumnIndex)));
-    dtDateTime, dtDate, dtTime, dtDateTimeStamp: Result := TValue.From<TDateTime>(TDateTime(FCurrentRow.GetData(AColumnIndex)));
-    dtAnsiString, dtWideString, dtByteString, dtMemo, dtWideMemo, dtXML: Result := TValue.From<string>(string(FCurrentRow.GetData(AColumnIndex)));
-    dtBlob, dtHBlob, dtHBFile: 
-    begin
-       // Binary data handling
-       // Need to get stream or bytes
-       // TFDDatSRow.GetData might return variant array for blobs
-        Val := FCurrentRow.GetData(AColumnIndex);
-        Result := TValue.FromVariant(Val); 
-    end;
-    dtBoolean: Result := TValue.From<Boolean>(Boolean(FCurrentRow.GetData(AColumnIndex)));
-    dtGUID: 
-      begin
-         // DatS stores GUID as string or binary? Depends on mapping.
-         // Assuming string for now or variant
-         Val := FCurrentRow.GetData(AColumnIndex);
-         Result := TValue.FromVariant(Val);
-      end;
+  case FTable.Columns[AColumnIndex].DataType of
+    dtInt32, dtInt16, dtByte, dtUInt16, dtSByte: Result := TValue.From<Integer>(Integer(Data));
+    dtInt64, dtUInt32, dtUInt64: Result := TValue.From<Int64>(Int64(Data));
+    dtDouble, dtSingle, dtCurrency, dtBCD, dtFmtBCD: Result := TValue.From<Double>(Double(Data));
+    dtDateTime, dtDate, dtTime, dtDateTimeStamp: Result := TValue.From<TDateTime>(TDateTime(Data));
+    dtAnsiString, dtWideString, dtByteString, dtMemo, dtWideMemo, dtXML: Result := TValue.From<string>(string(Data));
+    dtBlob, dtHBlob, dtHBFile: Result := TValue.From<TBytes>(TBytes(Data));
+    dtGUID: Result := TValue.From<TGUID>(TGUID(Data));
+    dtBoolean: Result := TValue.From<Boolean>(Boolean(Data));
   else
-    Val := FCurrentRow.GetData(AColumnIndex);
-    Result := TValue.FromVariant(Val);
+    Result := TValue.FromVariant(Data);
   end;
 end;
 
