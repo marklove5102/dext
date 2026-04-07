@@ -1,4 +1,4 @@
-
+﻿
 unit Dext.Entity.DataSet;
 
 interface
