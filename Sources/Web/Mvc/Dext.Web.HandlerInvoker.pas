@@ -111,8 +111,11 @@ type
 implementation
 
 uses
-  Dext.Json,
-  Dext.Validation;
+  Dext.Json
+  {$IFDEF DEXT_ENABLE_ENTITY}
+  ,Dext.Entity.Attributes
+  {$ENDIF}
+  ,Dext.Validation;
 
 { THandlerInvoker }
 
@@ -127,9 +130,14 @@ end;
 procedure THandlerInvoker.CleanupBoundObjects;
 var
   I: Integer;
+  Obj: TObject;
 begin
   for I := 0 to High(FBoundObjects) do
-    FBoundObjects[I].Free;
+  begin
+    Obj := FBoundObjects[I];
+    if Obj <> nil then
+       Obj.Free;
+  end;
   FBoundObjects := nil;
 end;
 
@@ -212,7 +220,8 @@ begin
        else
          Result := TModelBinderHelper.BindBody<T>(FModelBinder, FContext);
        
-       // Track the created object for cleanup (except Entities, which Context owns)
+       // Track the created object for cleanup.
+       // Entities ([Table]) are NOT tracked because the DbContext assumes ownership.
        if TValue.From<T>(Result).AsObject <> nil then
        begin
          var IsEntity := False;
@@ -230,12 +239,7 @@ begin
          finally
            CtxRtti.Free;
          end;
-         
-         // TODO: This ownership transfer is fragile. It assumes the developer will ALWAYS
-         // add the entity to the DbContext, which then assumes memory ownership.
-         // If they don't, we will leak memory. We need a more robust tracking mechanism,
-         // perhaps checking if the entity was actually persisted (e.g., checking if an ID was filled)
-         // or using a dedicated tracking wrapper/interface instead of purely relying on [Table].
+
          if not IsEntity then
          begin
            SetLength(FBoundObjects, Length(FBoundObjects) + 1);

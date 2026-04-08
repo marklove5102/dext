@@ -269,6 +269,7 @@ begin
         Problem.Detail := Format('%s: %s', [E.ClassName, E.Message]);
         // Stack trace might be too long or contain newlines breaking simple JSON format above.
         // Keeping it simple for now.
+        // TODO : Adicionar Stack Trace
       end;
 
       AContext.Response.StatusCode := Problem.Status;
