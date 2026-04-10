@@ -207,21 +207,35 @@ Melhorias na fundação de baixo nível que impactam **todos os módulos** do fr
 
 ### Pós-1.0 — Sprint 1 (Performance)
 
-- Core RTTI Pool (A.1, A.2)
-- Span SIMD (A.3)
-- Rate Limiting Cleanup (A.5)
+- ~~Core RTTI Pool (A.1, A.2)~~ ✅
+- ~~Span SIMD (A.3)~~ ✅
+- ~~Rate Limiting Cleanup (A.5)~~ ✅
 
 ### Pós-1.0 — Sprint 2 (Extensibilidade)
 
-- Configuration Watchers e Validation (E.1, E.2)
-- Multipart/Form-Data (C.1)
-- MIME extensível (B.1)
+- Configuration Watchers e Validation (E.1, E.2) 🟡 (Faltam Testes)
+- Multipart/Form-Data (C.1) 🟡 (Faltam Testes)
+- MIME extensível (B.1) 🟡 (Faltam Testes)
 
 ### Pós-1.0 — Sprint 3 (Refinamento)
 
 - ORM: Lazy Loading e AST Parser (D.2, D.3)
-- Testing: Snapshots e Templates (G.2, G.3)
+- ~~Testing: Snapshots e Templates (G.2, G.3)~~ ✅
 - Design-Time: SQL Tab e SearchBox (H.1, H.2)
+
+---
+
+## 🧪 Cobertura de Testes Unitários (Estabilidade da Fase 3)
+
+> Testes estruturais elaborados para blindar as melhorias implementadas na Fase 3 e garantir ausência de regressões ("Memory Leaks" e "Acesso a Ponteiros de RTTI").
+
+| Ref | Teste de Cobertura | Status | Descrição |
+| :---: | :--- | :---: | :--- |
+| T.1 | **Serialização de Interfaces (`IList<T>`)** | ✅ | Assegurar que `TDextSerializer` extrai dados por iteradores (`Count`, `GetItem`) corretamente a partir de `IInterface`. |
+| T.2 | **Memory Leak Guard (`TActivator` Cache)** | ✅ | Loop massivo para instanciar contextos no RTTI Pool constatando o retorno seguro de instâncias sem vazar memória. |
+| T.3 | **Validação JWT & Multipart (Amarelos)** | ✅ | Asserts baseados em dados variados para garantir que `B.3` (JWT) e `C.1` (Multipart) estão sólidos em tráfego real. |
+| T.4 | **Configuration Pipeline (`E.1` e `E.2`)** | ✅ | Testar validações obrigatórias de Options e hot-reload via `FileSystemWatcher`. |
+
 
 ---
 

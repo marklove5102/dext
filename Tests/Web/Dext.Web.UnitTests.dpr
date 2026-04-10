@@ -1,4 +1,4 @@
-﻿program Dext.Web.UnitTests;
+program Dext.Web.UnitTests;
 
 {$APPTYPE CONSOLE}
 
@@ -13,7 +13,8 @@ uses
   Dext.Utils,
   Dext.Web.DataApi.Resolver.Tests in 'Dext.Web.DataApi.Resolver.Tests.pas',
   Dext.Web.Json.Tests in 'Dext.Web.Json.Tests.pas',
-  Dext.Web.Binding.Tests in 'Dext.Web.Binding.Tests.pas';
+  Dext.Web.Binding.Tests in 'Dext.Web.Binding.Tests.pas',
+  Dext.Web.Features.Tests in 'Dext.Web.Features.Tests.pas';
 
 begin
   SetConsoleCharSet();
@@ -29,7 +30,8 @@ begin
       .RegisterFixtures([
         TWebBindingTests,
         TEntityIdResolverTests,
-        TJsonNullableTests
+        TJsonNullableTests,
+        TWebFeaturesTests
       ]).Run;
 
     TTest.SetExitCode(TestResult);
