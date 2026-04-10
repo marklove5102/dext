@@ -98,6 +98,22 @@
 
 ---
 
+## 🔄 Status de Execução (Fase 3)
+
+- A.1 **Web RTTI Pool**: ✅ Concluído
+- A.2 **Activator Context Cache**: ✅ Concluído
+- A.3 **Span SIMD**: ✅ Concluído
+- A.5 **Limpeza de Partições**: ✅ Concluído
+- B.1 **MIME Extensível**: 🟡 Implementado
+- B.3 **Otimização JWT**: 🟡 Implementado
+- C.1 **Multipart/Form-Data**: 🟡 Implementado
+- E.1 **Configuration Watchers**: 🟡 Implementado
+- E.2 **Validation in Config**: 🟡 Implementado
+- G.3 **HTML Reporter Templates**: ✅ Concluído
+- C.2 **Unificação de Escapes**: ✅ Concluído
+
+---
+
 ## A. Core & Performance
 
 Melhorias na fundação de baixo nível que impactam **todos os módulos** do framework.
@@ -127,7 +143,7 @@ Melhorias na fundação de baixo nível que impactam **todos os módulos** do fr
 | # | Melhoria | Unit Afetada | Descrição |
 | :---: | :--- | :--- | :--- |
 | C.1 | **Multipart/Form-Data** | `Dext.Net.RestRequest` | Facilitar envio de arquivos e campos de formulário via métodos dedicados no builder (`AddFile`, `AddFormField`). |
-| C.2 | **Unificação de Escapes** | `Dext.Utils` (nova centralização) | Centralizar funções `EscapeXml` e `EscapeJson` em `Dext.Utils` para evitar duplicação entre reporters, serializers e RestClient. |
+| C.2 | **Unificação de Escapes** | `Dext.Text.Escaping` | Centralizar funções `EscapeXml` e `EscapeJson` em unit única para evitar duplicação entre reporters, serializers e RestClient. | ✅ Concluído |
 
 ---
 
@@ -160,11 +176,11 @@ Melhorias na fundação de baixo nível que impactam **todos os módulos** do fr
 
 ## G. Testing & QA
 
-| # | Melhoria | Unit Afetada | Descrição |
-| :---: | :--- | :--- | :--- |
-| G.1 | **Soft Assertions Thread-Safety** | `Dext.Assertions` | Validar thread-safety do `Assert.Multiple` com `ThreadLocal` em cenários multithread massivos. |
-| G.2 | **Snapshots Inteligentes** | `Dext.Assertions` | Evoluir `MatchSnapshot` para ignorar diferenças irrelevantes em JSON (ordem de campos, espaços em branco). |
-| G.3 | **Templates em HTML Reporter** | `Dext.Testing.Report` | Substituir geração de strings hardcoded em `THTMLReporter` por motor de templates básico, permitindo customização visual. |
+| # | Melhoria | Unit Afetada | Descrição | Status |
+| :---: | :--- | :--- | :--- | :--- |
+| G.1 | **Soft Assertions Thread-Safety** | `Dext.Assertions` | Validar thread-safety do `Assert.Multiple` com `ThreadLocal` em cenários multithread massivos. | [TODO] |
+| G.2 | **Snapshots Inteligentes** | `Dext.Assertions` | Evoluir `MatchSnapshot` para ignorar diferenças irrelevantes em JSON (ordem de campos, espaços em branco). | ✅ Concluído |
+| G.3 | **HTML Reporter Templates** | `Dext.Testing.Report` | Refatorar `THTMLReporter` para usar `Dext.Templating`, convertendo estruturas para classes e unificando escapes. | ✅ Concluído |
 
 ---
 
