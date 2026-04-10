@@ -158,8 +158,26 @@ begin
   
   for var I := 0 to FQuery.Fields.Count - 1 do
   begin
-    if (FQuery.Fields[I].DataType = ftMemo) or (FQuery.Fields[I].DataType = ftWideMemo) then
-      FQuery.Fields[I].OnGetText := MemoFieldGetText;
+    var Fld := FQuery.Fields[I];
+    if (Fld.DataType = ftMemo) or (Fld.DataType = ftWideMemo) then
+      Fld.OnGetText := MemoFieldGetText;
+
+    // H.3: Visualização de Tipos no Preview
+    for var J := 0 to MD.Members.Count - 1 do
+    begin
+      var Member := MD.Members[J];
+      if SameText(Member.Name, Fld.FieldName) or SameText(Member.Name, Fld.Origin) then
+      begin
+        var TypeStr := Member.MemberType;
+        if Member.MaxLength > 0 then
+          TypeStr := TypeStr + '(' + Member.MaxLength.ToString + ')';
+        if Member.Precision > 0 then
+          TypeStr := TypeStr + '(' + Member.Precision.ToString + ')';
+          
+        Fld.DisplayLabel := Format('%s [%s]', [Fld.FieldName, TypeStr.ToUpper]);
+        Break;
+      end;
+    end;
   end;
 
   // Auto-ajuste básico de larguras de colunas

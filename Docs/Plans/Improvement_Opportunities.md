@@ -113,6 +113,8 @@
 - D.3 **Metadata Parser (AST)**: ✅ Concluído
 - H.1 **Filtro de Entidades**: ✅ Concluído
 - H.2 **SQL Tab no Preview**: ✅ Concluído
+- H.3 **Visualização de Tipos**: ✅ Concluído
+- G.1 **Soft Assertions Thread-Safety**: ✅ Concluído
 
 ---
 
@@ -180,8 +182,8 @@ Melhorias na fundação de baixo nível que impactam **todos os módulos** do fr
 
 | # | Melhoria | Unit Afetada | Descrição | Status |
 | :---: | :--- | :--- | :--- | :--- |
-| G.1 | **Soft Assertions Thread-Safety** | `Dext.Assertions` | Validar thread-safety do `Assert.Multiple` com `ThreadLocal` em cenários multithread massivos. | [TODO] |
-| G.2 | **Snapshots Inteligentes** | `Dext.Assertions` | Evoluir `MatchSnapshot` para ignorar diferenças irrelevantes em JSON (ordem de campos, espaços em branco). | ✅ Concluído |
+| G.1 | **Soft Assertions Thread-Safety** | `Dext.Assertions` | ✅ Concluído. Validada thread-safety do `Assert.Multiple` com isolamento via `threadvar`. |
+| G.2 | **Snapshots Inteligentes** | `Dext.Assertions` | ✅ Concluído. Evoluir `MatchSnapshot` para ignorar diferenças irrelevantes em JSON (ordem de campos, espaços em branco). |
 | G.3 | **HTML Reporter Templates** | `Dext.Testing.Report` | Refatorar `THTMLReporter` para usar `Dext.Templating`, convertendo estruturas para classes e unificando escapes. | ✅ Concluído |
 
 ---
@@ -192,7 +194,7 @@ Melhorias na fundação de baixo nível que impactam **todos os módulos** do fr
 | :---: | :--- | :--- | :--- |
 | H.1 | **Filtro de Entidades** | `Dext.EF.Design.Editors` | ✅ Concluído. Implementar SearchBox no editor de classes de entidade para projetos com centenas de modelos. |
 | H.2 | **SQL Tab no Preview** | `Dext.EF.Design.Preview` | ✅ Concluído. Adicionar aba "SQL" no `TPreviewForm` para visualizar o comando SQL gerado. |
-| H.3 | **Visualização de Tipos** | `Dext.EF.Design.Preview` | Exibir detalhes de metadados (tipo real, tamanho, precisão) no cabeçalho ou hint das colunas do grid de preview. |
+| H.3 | **Visualização de Tipos** | `Dext.EF.Design.Preview` | ✅ Concluído. Exibir detalhes de metadados (tipo real, tamanho, precisão) no cabeçalho das colunas do grid de preview. |
 
 ---
 ---
