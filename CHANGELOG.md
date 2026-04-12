@@ -6,6 +6,28 @@
 
 ---
 
+## 🚀 2026-04-11 - Documentation Centralization & RC 1.0 Milestone
+
+### ✨ Major Features / Features Principais
+
+> **A centralização definitiva da documentação e preparação para o lançamento v1.0!**
+>
+> **The definitive documentation centralization and preparation for v1.0 release!**
+
+#### Dext Book & Knowledge Base
+**[PT-BR]** Consolidamos toda a documentação fragmentada no **Dext Book** (EN/PT-BR). Agora existe uma fonte única de verdade para todos os módulos, com paridade técnica e exemplos atualizados.
+**[EN]** Consolidated all fragmented documentation into the **Dext Book** (EN/PT-BR). There is now a single source of truth for all modules, with technical parity and updated examples.
+
+- 📚 **Centralized Book** - Migração total de arquivos soltos para uma estrutura de capítulos organizada (`Docs/Book` e `Docs/Book.pt-br`).
+- 🗺️ **Unified Roadmap** - Novo roadmap consolidado refletindo as fases finais para a v1.0 estável.
+- 🧹 **Artifact Cleanup** - Arquivamento de documentos de design e especificações antigas para a pasta `Docs/Archive`.
+
+#### Framework Stabilization
+**[PT-BR]** Ajustes finais em roteamento, injeção de dependência e performance do motor JSON para garantir estabilidade absoluta.
+**[EN]** Final adjustments in routing, dependency injection, and JSON engine performance to ensure absolute stability.
+
+---
+
 ## 🚀 2026-03-01 - Dext.Collections Refactoring: Performance & Memory Safety
 
 ### ✨ Major Features / Features Principais
@@ -236,8 +258,8 @@ var NoProfile := Context.UserSettings
 
 #### 📚 Documentation / Documentação
 
-- **English**: [JSON Queries Guide](docs/Book/05-orm/json-queries.md)
-- **Português**: [Guia de Consultas JSON](docs/Book.pt-br/05-orm/consultas-json.md)
+- **English**: [JSON Queries Guide](Docs/Book/05-orm/json-queries.md)
+- **Português**: [Guia de Consultas JSON](Docs/Book.pt-br/05-orm/consultas-json.md)
 
 ---
 

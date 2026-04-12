@@ -1,5 +1,8 @@
 # Dext Framework — Agent Skills
 
+> [!NOTE]
+> **Propósito**: Esta pasta contém pacotes de instruções focados em agentes de IA (como Antigravity, Claude e Codex). Enquanto o **Dext Book** é o guia mestre para humanos, o **Skills** é otimizado para que IAs possam ler e aplicar padrões de código idiomáticos do Dext rapidamente.
+
 Focused instruction packages for writing correct, idiomatic **Dext** (Delphi modern framework) code.
 
 ## Available Skills
@@ -24,10 +27,11 @@ Focused instruction packages for writing correct, idiomatic **Dext** (Delphi mod
 
 ## Manual Installation
 
-Copy the `Docs/ai-agents/skills/` folder into your project, then reference skills by filename.
+Copy the `Docs/Skills/` folder into your project, then reference skills by filename.
 
 | Agent | Project-level path | Global path |
 |-------|--------------------|-------------|
+| **Antigravity** | `.gemini/skills/` | `.gemini/skills/` |
 | **Claude Code** | `.claude/skills/` | `~/.claude/skills/` |
 | **Cursor** | `.agents/skills/` | `~/.agents/skills/` |
 | **Cline** | `.cline/skills/` | `~/.cline/skills/` |
@@ -36,7 +40,7 @@ Copy the `Docs/ai-agents/skills/` folder into your project, then reference skill
 
 ## How It Works
 
-Skills are loaded dynamically when the agent needs them. The README is always loaded so the agent knows which skill to activate. Individual skill files are loaded on demand — keeping the context window lean. Note that some advanced users prefer to setup symbolic links to point tools like `claude-code` from `.claude/skills` directly to the `Docs/ai-agents/skills` repository.
+Skills are loaded dynamically when the agent needs them. The README is always loaded so the agent knows which skill to activate. Individual skill files are loaded on demand — keeping the context window lean. Note that some advanced users prefer to setup symbolic links to point tools like `claude-code` from `.claude/skills` directly to the `Docs/Skills` repository.
 
 ## Trigger Guide
 

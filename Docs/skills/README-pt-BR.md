@@ -1,5 +1,8 @@
 # Dext Framework — Agent Skills (Habilidades do Agente)
 
+> [!NOTE]
+> **Propósito**: Esta pasta contém pacotes de instruções focados em agentes de IA (como Antigravity, Claude e Codex). Enquanto o **Dext Book** é o guia mestre para humanos, o **Skills** é otimizado para que IAs possam ler e aplicar padrões de código idiomáticos do Dext rapidamente.
+
 Pacotes de instruções focados para escrever código **Dext** (framework moderno para Delphi) correto e idiomático.
 
 ## Habilidades Disponíveis
@@ -24,10 +27,11 @@ Pacotes de instruções focados para escrever código **Dext** (framework modern
 
 ## Instalação Manual
 
-Copie a pasta `Docs/ai-agents/skills/` para o seu projeto e, em seguida, referencie as habilidades pelo nome do arquivo.
+Copie a pasta `Docs/Skills/` para o seu projeto e, em seguida, referencie as habilidades pelo nome do arquivo.
 
 | Agente | Caminho no projeto | Caminho global |
 |-------|--------------------|-------------|
+| **Antigravity** | `.gemini/skills/` | `.gemini/skills/` |
 | **Claude Code** | `.claude/skills/` | `~/.claude/skills/` |
 | **Cursor** | `.agents/skills/` | `~/.agents/skills/` |
 | **Cline** | `.cline/skills/` | `~/.cline/skills/` |
@@ -36,7 +40,7 @@ Copie a pasta `Docs/ai-agents/skills/` para o seu projeto e, em seguida, referen
 
 ## Como Funciona
 
-As habilidades são carregadas dinamicamente quando o agente precisa delas. O README é sempre carregado para que o agente saiba qual habilidade ativar. Os arquivos de habilidades individuais são carregados sob demanda — mantendo a janela de contexto leve. Note que alguns usuários avançados preferem configurar links simbólicos para apontar ferramentas como o `claude-code` de `.claude/skills` diretamente para o repositório em `Docs/ai-agents/skills`.
+As habilidades são carregadas dinamicamente quando o agente precisa delas. O README é sempre carregado para que o agente saiba qual habilidade ativar. Os arquivos de habilidades individuais são carregados sob demanda — mantendo a janela de contexto leve. Note que alguns usuários avançados preferem configurar links simbólicos para apontar ferramentas como o `claude-code` de `.claude/skills` diretamente para o repositório em `Docs/Skills`.
 
 ## Guia de Ativação (Triggers)
 

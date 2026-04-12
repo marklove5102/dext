@@ -5,7 +5,7 @@
 > ⚠️ **Status: Beta (v1.0 Preview)**
 > > The project has reached the Beta milestone. Core APIs are stable, but minor breaking changes might still occur before the final v1.0 release.
 >
-> 📌 **Check out the [V1.0 Beta Roadmap & Plan](Docs/Releases/v1-beta-roadmap.md)** for a detailed list of features, pending tasks, and future plans.
+> 📌 **Check out the [Roadmap & Plan](Docs/Book/roadmap.md)** for a detailed list of features, pending tasks, and future plans.
 
 > 📢 **[Novidades / Changelog](CHANGELOG.md)** — Últimas atualizações, breaking changes e novas features / Latest updates, breaking changes and new features
 
@@ -58,7 +58,7 @@ A lightweight and powerful HTTP framework for building REST APIs and microservic
 * **Dynamic Specification Mapping**: Automatic QueryString filtering integration (`_gt`, `_lt`, `_sort`, etc).
 * **WebBroker Server Adapter** ⭐ NEW: Deploy as ISAPI/CGI via WebBroker in IIS/Apache with zero code changes, running alongside Indy.
 * **DCS Server Adapter** ⭐ NEW: High-performance non-blocking HTTP engine (epoll/IOCP) powered by Delphi-Cross-Socket.
-* **Real-Time Communication** ⭐ NEW: SignalR-compatible Hubs for real-time messaging. Supports groups, user targeting, and broadcast with `Dext.Web.Hubs`. [Learn more](Docs/hubs.md)
+* **Real-Time Communication** ⭐ NEW: SignalR-compatible Hubs for real-time messaging. Supports groups, user targeting, and broadcast with `Dext.Web.Hubs`. [Learn more](Docs/Book/07-real-time/hubs-signalr.md)
 * **SSR & View Engines** ⭐ NEW: Agnostic Server-Side Rendering support with Flyweight Iterators for O(1) memory loops and native integration with **Web Stencils** (Delphi 12.2+) with optimized fluent DSL.
 
 ### 🗄️ Dext.Entity (ORM)
@@ -69,7 +69,7 @@ A modern ORM focused on productivity and performance.
 * **Scaffolding**: Database-First support to generate entities from existing schemas.
 * **Migrations**: Database schema version control (`migrate:up`, `migrate:down`, `migrate:generate`).
 * **Fluent Query API**: Strongly typed and expressive queries.
-* **Smart Properties**: Type-safe query expressions without magic strings. Write `u.Age > 18` and get compile-time checks, IntelliSense, and automatic SQL generation. [Learn more](Docs/smart-properties.md)
+* **Smart Properties**: Type-safe query expressions without magic strings. Write `u.Age > 18` and get compile-time checks, IntelliSense, and automatic SQL generation. [Learn more](Docs/Book/05-orm/smart-properties.md)
 * **Change Tracking**: Automatic change tracking and optimized persistence.
 * **Advanced Types**: Native support for **UUID v7** (Time-Ordered), JSON/JSONB, and Arrays.
 * **DbType Propagation**: Explicit control over database types via `[DbType]` attribute, ensuring data integrity beyond Delphi types.
@@ -138,6 +138,15 @@ The definitive, modern testing framework for Delphi, inspired by NUnit, FluentAs
 * **Live Dashboard** ⭐ NEW: Monitor your tests in real-time with a beautiful dark-themed web dashboard and historical analysis.
 * **Code Coverage & CLI**: Run tests and generate SonarQube-ready coverage reports with `dext test --coverage`. Enforce quality gates with thresholds.
 
+### 🧩 Dext.Collections ⭐ **NEW**
+
+High-performance collection library inspired by .NET 8.
+
+* **Standard & Concurrent**: Optimized implementations of List, Dictionary, HashSet, and thread-safe versions like `ConcurrentQueue`.
+* **Frozen Collections**: Immutable, high-performance data structures for read-heavy scenarios.
+* **Channels**: Go-style asynchronous communication primitives (Producer/Consumer) for data pipelines.
+* **Hardware Acceleration**: SIMD & Vector (AVX/SSE) support for batch processing.
+
 ### 🖥️ Dext.UI (Desktop Framework) ⭐ NEW
 
 A modern UI framework for building professional VCL desktop applications.
@@ -155,57 +164,61 @@ A modern UI framework for building professional VCL desktop applications.
   * Controller pattern for orchestration
   * View interfaces for decoupling
 
+### ⚙️ Dext.Core (Extensions)
+
+* **Smart Reflection**: High-performance metadata engine with global type caching.
+* **Greedy Activator**: Intelligent constructor resolution for complex dependency trees.
+* **Memory Optimization**: `Dext.Core.Span` (Zero-allocation) and advanced memory management.
+
 ---
 
 ## 📚 Documentation Index
 
 ### 🚀 Getting Started
 
-* **📖 [The Dext Book](Docs/Book/README.md)** ⭐ NEW - Complete guide from installation to advanced topics | [🇧🇷 Português](Docs/Book.pt-br/README.md)
+* **📖 [The Dext Book](Docs/Book/README.md)**
 
 ### 🌐 Web API
 
 * **Routing & Endpoints**
-  * [Minimal API](Docs/minimal-api.md)
-  * [Validation](Docs/model-binding.md) # (Includes validation)
+  * [Minimal API](Docs/Book/02-web-framework/minimal-apis.md)
+  * [Validation & Binding](Docs/Book/02-web-framework/model-binding.md)
 
 * **Security & Middleware**
-  * [JWT Authentication](Docs/jwt-authentication.md)
+  * [JWT Authentication](Docs/Book/03-authentication/jwt-auth.md)
   * [HTTPS/SSL Configuration](Examples/Web.SslDemo/README.md)
-  * [CORS](Docs/cors.md)
-  * [Rate Limiting](Docs/rate-limiting.md)
+  * [CORS](Docs/Book/04-api-features/cors.md)
+  * [Rate Limiting](Docs/Book/04-api-features/rate-limiting.md)
 * **Advanced**
-  * [Database as API](Docs/database-as-api.md)
-  * [Background Services](Docs/background-services.md)
-  * [Action Filters](Docs/action-filters.md)
-  * [Swagger / OpenAPI](Docs/swagger.md)
-  * [Real-Time Hubs](Docs/hubs.md) ⭐ NEW
+  * [Database as API](Docs/Book/06-database-as-api/crud-zero-code.md)
+  * [Background Services](Docs/Book/10-advanced/background-services.md)
+  * [Action Filters](Docs/Book/04-api-features/filters.md)
+  * [Swagger / OpenAPI](Docs/Book/04-api-features/openapi-swagger.md)
+  * [Real-Time Hubs](Docs/Book/07-real-time/hubs-signalr.md) ⭐ NEW
 
 ### 🗄️ Data Access (ORM)
 
-* [Database Configuration](Docs/database-config.md)
-
-* [Fluent Query API](Docs/fluent-query-api.md)
-* [Smart Properties](Docs/smart-properties.md) ⭐ NEW
-* [Migrations](Docs/migrations.md)
-* [Lazy Loading](Docs/lazy-loading-advanced.md)
-* [Bulk Operations](Docs/bulk-operations.md)
-* [Soft Delete](Docs/soft-delete.md)
+* [Database Configuration](Docs/Book/05-orm/getting-started.md)
+* [Fluent Query API](Docs/Book/05-orm/querying.md)
+* [Smart Properties](Docs/Book/05-orm/smart-properties.md) ⭐ NEW
+* [Migrations](Docs/Book/05-orm/migrations.md)
+* [Relationships (Lazy/Eager)](Docs/Book/05-orm/relationships.md)
+* [Bulk Operations](Docs/Archive/loose/bulk-operations.md)
+* [Soft Delete](Docs/Book/05-orm/soft-delete.md)
 
 ### ⚙️ Core & Infrastructure
 
-* [Dependency Injection & Scopes](Docs/scoped-services.md)
-
-* [Application Configuration](Docs/app-configuration.md)
-* [Options Pattern](Docs/options-pattern.md)
-* [Application Lifecycle & Integrity](Docs/application-lifecycle.md)
-* [Async Programming](Docs/async-api.md)
-* [Caching](Docs/caching.md)
-* [CLI Tool & Migrations](Docs/cli.md) ⭐ NEW - Includes **Web Dashboard** (`dext ui`), **Documentation Generator** (`dext doc`), and **Facade Generator** (`dext facade`).
+* [Dependency Injection & Scopes](Docs/Book/10-advanced/dependency-injection.md)
+* [Application Configuration](Docs/Book/10-advanced/configuration.md)
+* [Options Pattern](Docs/Book/10-advanced/configuration.md)
+* [Application Lifecycle](Docs/Book/02-web-framework/lifecycle.md)
+* [Async Programming](Docs/Book/10-advanced/async-api.md)
+* [Caching](Docs/Book/04-api-features/cache.md)
+* [CLI Tool](Docs/Book/09-cli/commands.md) ⭐ NEW
 
 ### 🧪 Testing
 
-* [Getting Started](Docs/testing.md)
+* [Getting Started](Docs/Book/08-testing/README.md)
 
 ### 📰 Articles & Tutorials
 
@@ -223,7 +236,7 @@ A modern UI framework for building professional VCL desktop applications.
 
 ## 📦 Installation and Configuration
 
-> 📖 **Detailed Guide**: For a complete step-by-step walkthrough and advanced configuration, please read the [Installation Guide](Docs/installation.md).
+> 📖 **Detailed Guide**: For a complete step-by-step walkthrough and advanced configuration, please read the [Installation Guide](Docs/Book/01-getting-started/installation.md).
 
 1. **Clone the repository:**
 
@@ -254,7 +267,7 @@ A modern UI framework for building professional VCL desktop applications.
        * `$(DEXT)\Data`
        * `$(DEXT)\Hosting`
        * `$(DEXT)\Web`
-       * *(See [Installation Guide](Docs/installation.md) for the complete list)*
+       * *(See [Installation Guide](Docs/Book/01-getting-started/installation.md) for the complete list)*
 
    > 📝 **Note**: Compiled files (`.dcu`, binaries) will be generated in the `.\Output` directory.
 
@@ -410,21 +423,22 @@ The repository contains practical example projects:
 
 ---
 
-## 🔮 Coming Soon
-
-* **Documentation**: Complete revision and bilingual support (English/Portuguese) for all modules.
-
 ---
 
 ## 🗺️ Roadmaps
 
 Follow the project development:
 
-* [V1.0 Release Plan](Docs/Roadmap/v1-release-plan.md) 🚀
-* [ORM Roadmap](Docs/Roadmap/orm-roadmap.md)
-* [Web Framework Roadmap](Docs/Roadmap/web-roadmap.md)
-* [Infra & IDE Roadmap](Docs/Roadmap/infra-roadmap.md)
-* [Architecture & Performance](Docs/architecture-performance.md)
+* [Main Roadmap](Docs/Book/roadmap.md) 🚀
+* [Pending Tasks (Trackers)](Docs/Book/roadmap/pending-tasks.md) 📋
+* [Architecture Guide](Docs/architecture/README.md) 🏗️
+
+#### Historical Documents
+* [Architecture & Performance](Docs/History/loose/architecture-performance.md)
+* [ORM Roadmap (Legacy)](Docs/History/roadmaps/orm-roadmap.md)
+* [Web Framework Roadmap (Legacy)](Docs/History/roadmaps/web-roadmap.md)
+* [Infra & IDE Roadmap (Legacy)](Docs/History/roadmaps/infra-roadmap.md)
+* [V1.0 Release Plan (Legacy)](Docs/History/roadmaps/v1-release-plan.md)
 
 ---
 
