@@ -9,9 +9,11 @@ Status | Feature | Example Name | Description
 🔴 | **VCL Data Binding** | `Desktop.VCL.DataBinding` | Demonstrate `TEntityDataSet` with standard VCL controls.
 🔴 | **Advanced Middlewares** | `Web.Middleware.Production` | Implementation of CORS, Rate Limiting, and Health Checks.
 
-## 🛡️ Phase 2: Enterprise & Security
+## 💎 Phase 2: Enterprise & Showcase (Target: Embarcadero/Partners)
 Status | Feature | Example Name | Description
 :---: | :--- | :--- | :---
+🔴 | **Embarcadero Showcase** | `Web.Embarcadero.Stack` | **WebBroker** + **WebStencils** + **Interbase**. A full-stack native showcase with business rules.
+🔴 | **Live Telemetry** | `Web.Observability.SQL` | Real-time SQL and Exception tracing using the new diagnostic UI.
 🔴 | **OAuth2 & JWT** | `Web.Security.OAuth2` | Secure API with JWT tokens and Role-based authorization.
 🔴 | **Fluent Tasks** | `Common.Async.FluentTasks` | Complex async chains with background processing.
 🔴 | **Event Bus** | `Common.Events.Distributed` | Cross-layer event communication.
@@ -33,6 +35,13 @@ Status | Funcionalidade | Nome do Exemplo | Descrição
 🟡 | **DataAPI Simplificada** | `Web.DatabaseAsApi.Simplified` | Registro dinâmico via atributos de múltiplas entidades.
 🔴 | **VCL Data Binding** | `Desktop.VCL.DataBinding` | Demonstrar `TEntityDataSet` com controles VCL padrão.
 🔴 | **Middlewares Avançados** | `Web.Middleware.Production` | Implementação de CORS, Rate Limiting e Health Checks.
+
+## 💎 Fase 2: Enterprise & Showcase (Foco: Embarcadero/Parceiros)
+Status | Funcionalidade | Nome do Exemplo | Descrição
+:---: | :--- | :--- | :---
+🔴 | **Showcase Embarcadero** | `Web.Embarcadero.Stack` | **WebBroker** + **WebStencils** + **InterBase**. Exemplo completo com regras de negócio.
+🔴 | **Telemetria ao Vivo** | `Web.Observability.SQL` | Tracing de SQL e Exceções em tempo real usando a nova UI.
+🔴 | **OAuth2 & JWT** | `Web.Security.OAuth2` | API segura com JWT e autorização baseada em Roles.
 
 ---
 *Last update: April 2026*

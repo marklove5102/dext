@@ -1,74 +1,41 @@
-# 📋 Dext V1.0 Stable - Pending Tasks (Backlog)
+# 📋 Dext Framework: Pending Tasks (V1 Stable Backlog)
 
-This document centralizes the technical and ecosystem tasks required to declare **Dext Framework** as stable (V1.0).
+This document tracks all features and fixes required for the V1.0 Stable release.
+
+## 🟢 Wave 1: Quick Wins & Visibility (Immediate)
+Status | Task | Description
+:---: | :--- | :---
+🟡 | **Dynamic Port Binding** | Support for Port 0 (OS chooses free port) for Demos and CI.
+🟡 | **DataAPI Conventions (S04)** | Auto-discovery, 'T' prefix stripping, and Smart Attributes.
+🟡 | **Examples Roadmap** | Create high-fidelity examples for existing features.
+🟡 | **Agent Guidelines** | Finalize `CONTRIBUTING_AI.md` and related Workflows.
 
 ---
 
-## 🛠️ Code Quality & Ecosystem
+## 🔵 Wave 2: Performance & Productivity (Foundation)
 Status | Task | Description
 :---: | :--- | :---
-🟡 | **Advanced Scaffolding** | New template engine for Startup, Entities, Endpoints, and Controllers.
-🟡 | **Template Parity** | High-fidelity templates for both Web Stencils and Native Delphi.
-🟡 | **Dext IDE Explorer** | Visual tool for Migrations and Scaffolding inside Delphi.
-🟡 | **OAuth2 & OIDC** | Native JWT and Social Login (Google/Microsoft) support.
-🟡 | **Dynamic Port Binding** | Support for Port 0 (OS chooses free port) with post-bind discovery.
-🟡 | **Agent Guidelines** | Finalize `CONTRIBUTING_AI.md` to guide AI assistants.
+🔴 | **High-Perf Reflection (S07)** | Type Handler Registry to eliminate RTTI/TValue overhead.
+🟡 | **Advanced Scaffolding (S01)** | New CLI template engine (`dext new`, `dext add`).
+🟡 | **Dext IDE Explorer (S05)** | Initial visual tool for Migrations inside the IDE.
+🟡 | **Production Middleware Pack** | SPA Fallback, Forwarded Headers, and Resilience.
 
 ---
 
-## 🧪 Testing Infrastructure & QA
+## 🔴 Wave 3: Enterprise & Modernization (Stability)
 Status | Task | Description
 :---: | :--- | :---
-🟡 | **Docker-Compose Environment** | Environment ready to spin up all databases simultaneously for integration tests.
-🟡 | **Dialect Matrix (Oracle/IB)** | Finalize test automation for Oracle and InterBase.
-🟡 | **Web Integration Tests** | Validate real-world Cookies, Binary Upload, and Compression via HTTP.
-🟡 | **HTTPS/SSL Validation** | Exhaustively validate OpenSSL 3.0 and Taurus TLS.
-
----
-
-## 🏎️ Benchmarks (V1.0 Baseline)
-Status | Task | Description
-:---: | :--- | :---
-🔴 | **Web Framework Benchmark** | Hello World, JSON Serialization, and DB Read (compare vs ASP.NET Core and Horse).
-🔴 | **ORM Benchmark** | Bulk Insert 10k and High-volume Select with Hydration vs pure FireDAC.
-
----
-
-## 📖 Documentation & Support
-Status | Task | Description
-:---: | :--- | :---
-🟡 | **Book Technical Review** | Validate all code examples in every chapter of the Book.
-🔴 | **Video Series (Screencasts)** | Record quick demos for core features (Web Hubs, Smart Properties).
-
----
-
-## 📡 Modernization & Services (The Modernizer)
-Status | Task | Description
-:---: | :--- | :---
-🟡 | **gRPC & Protobuf** | Initial implementation of the binary transport layer.
-🔴 | **TEntityDataSet Provider** | Pluggable providers (REST/gRPC) for EntityDataSet.
-🔴 | **Distributed Tracing** | Instrumentation UI and dynamic proxy-based tracing.
-🟡 | **PDF Signing Engine** | Module for signed PDF generation.
-
----
-
-## 🛡️ Production Middleware Pack
-Status | Task | Description
-:---: | :--- | :---
-🟡 | **CORS Middleware** | Multi-origin support for SPA frontends.
-🟡 | **SPA Fallback** | HTML5 History Mode (index.html redirection).
-🟡 | **Forwarded Headers** | Trust X-Forwarded-* headers from Proxies.
-🔴 | **Resilience (Polly-like)** | Retry and Circuit Breaker policies.
-🔴 | **Localization (i18n)** | Auto-detect culture from Accept-Language.
+🟡 | **gRPC & Protobuf (S02)** | Native IOCP/EPOLL engine for high-speed binary communication.
+🟡 | **OAuth2 & OIDC (S06)** | Native support for JWT, Google, and Microsoft Login.
+🔴 | **Live Tracing (S03)** | Real-time instrumentation and observability dashboard.
+🔴 | **EntityDataSet Providers** | Pluggable providers (REST/gRPC) for EntityDataSet.
 
 ---
 
 ## 🔮 Future / Post-V1
-- [ ] **OData Support**: Full support for OData queries.
-- [ ] **GraphQL**: Native layer for exposing data graphs.
-- [ ] **Skia UI (Revolutionary)**: Exploration of high-performance custom UI engine.
-- [ ] **Background Jobs (Redis/RabbitMQ)**: Persistent queue system with retries.
-- [ ] **CancellationToken Timeout**: Native support for `.WithTimeout(Duration)`.
+- [ ] **OData Support**: Full OData query support.
+- [ ] **GraphQL**: Native layer for data graphs.
+- [ ] **Microservices Mesh**: Service discovery and native Load Balancing.
 
 ---
-*Last update: April 11, 2026*
+*Last update: April 12, 2026*
