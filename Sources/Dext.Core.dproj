@@ -195,6 +195,7 @@ $(PreBuildEvent)]]></PreBuildEvent>
         <DCCReference Include="Core\Base\Dext.Templating.pas"/>
         <DCCReference Include="Events\Dext.Events.Interfaces.pas"/>
         <DCCReference Include="Core\Base\Dext.Text.Escaping.pas"/>
+        <DCCReference Include="Core\Base\Dext.Logging.Telemetry.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

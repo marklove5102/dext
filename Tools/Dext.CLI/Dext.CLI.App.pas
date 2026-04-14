@@ -93,6 +93,14 @@ type
     procedure Execute(const Args: TArray<string>);
   end;
 
+  TAddMigrationCommand = class(TInterfacedObject, IConsoleCommand)
+  public
+    function GetVerb: string;
+    function GetName: string;
+    function GetDescription: string;
+    procedure Execute(const Args: TArray<string>);
+  end;
+
 implementation
 
 { TDextCLI }
@@ -126,6 +134,7 @@ begin
   FCommands.Add(TAddServiceCommand.Create);
   FCommands.Add(TScaffoldDbCommand.Create);
   FCommands.Add(TNewProjectCommand.Create);
+  FCommands.Add(TAddMigrationCommand.Create);
 end;
 
 procedure TDextCLI.ShowHelp;
@@ -575,6 +584,65 @@ begin
     on E: Exception do
       WriteLn('Error creating project: ' + E.Message);
   end;
+end;
+
+{ TAddMigrationCommand }
+
+function TAddMigrationCommand.GetDescription: string;
+begin
+  Result := 'Adds a new migration to the current project';
+end;
+
+function TAddMigrationCommand.GetName: string;
+begin
+  Result := 'migration';
+end;
+
+function TAddMigrationCommand.GetVerb: string;
+begin
+  Result := 'add';
+end;
+
+procedure TAddMigrationCommand.Execute(const Args: TArray<string>);
+var
+  MigName, MigId, TemplatePath, OutputFile: string;
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+begin
+  if Length(Args) = 0 then
+  begin
+    WriteLn('Usage: dext add migration <Name>');
+    Exit;
+  end;
+
+  MigName := Args[0];
+  MigId := FormatDateTime('yyyymmddhhnnss', Now);
+  
+  TemplatePath := ResolveTemplate('migration.pas.template');
+  if TemplatePath = '' then
+  begin
+    WriteLn('Error: migration.pas.template not found.');
+    Exit;
+  end;
+
+  if not TDirectory.Exists('Migrations') then
+    TDirectory.CreateDirectory('Migrations');
+
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+  
+  Context.SetVariable('MigrationName', 'TMigration_' + MigId + '_' + MigName);
+  Context.SetVariable('Id', MigId);
+  Context.SetVariable('Description', MigName);
+
+  // Note: For now, we generate an empty migration shell.
+  // In a full implementation, we would diff the model here.
+  
+  var Output := Engine.Render(TFile.ReadAllText(TemplatePath), Context);
+  OutputFile := TPath.Combine('Migrations', 'U' + MigId + '_' + MigName + '.pas');
+  TFile.WriteAllText(OutputFile, Output);
+  
+  WriteLn('Migration created successfully: ' + OutputFile);
 end;
 
 end.

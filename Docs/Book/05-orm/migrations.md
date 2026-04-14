@@ -2,6 +2,21 @@
 
 Version control for your database schema. Dext supports both **Pascal-based** (compiled) and **JSON-based** (external) migrations.
 
+## Automated Rename Detection
+Starting with version 2.1, Dext supports non-destructive renames via the `[RenamedFrom]` attribute.
+
+```pascal
+[Table('Users')]
+[RenamedFrom('LegacyUsers')] // Tells the migrator this was previously 'LegacyUsers'
+TUser = class
+private
+  [RenamedFrom('FullName')] // Tells the migrator this was 'FullName'
+  FName: string;
+...
+```
+
+When you add a migration, Dext will generate a `Rename` operation instead of a `Drop` and `Add` pair, preserving your data.
+
 ## Creating a Pascal Migration
 
 Pascal migrations are units that implement the `IMigration` interface and are registered at initialization.
@@ -117,6 +132,18 @@ Builder.DropColumn('users', 'legacy_field');
 
 // Create an Index
 Builder.CreateIndex('users', 'IX_Users_Email', ['Email'], True);
+
+// Rename a table (v2.1+)
+Builder.RenameTable('old_name', 'new_name');
+
+// Rename a column (v2.1+)
+Builder.RenameColumn('users', 'old_col', 'new_col');
+
+// Seed data during migration
+Builder.Seed('settings', TJSONObject.Create
+  .AddPair('key', 'theme')
+  .AddPair('value', 'dark')
+);
 ```
 
 ### Execution (Safety Handshake)

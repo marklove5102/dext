@@ -16,7 +16,8 @@ uses
   Dext.Json.Refactored.Tests in 'Dext.Json.Refactored.Tests.pas',
   Dext.Configuration.Features.Tests in 'Dext.Configuration.Features.Tests.pas',
   Dext.Configuration.Hashing.Tests in 'Dext.Configuration.Hashing.Tests.pas',
-  Dext.Hosting.Events.Tests in 'Dext.Hosting.Events.Tests.pas';
+  Dext.Hosting.Events.Tests in 'Dext.Hosting.Events.Tests.pas',
+  Dext.Logging.Telemetry.Tests in 'Dext.Logging.Telemetry.Tests.pas';
 
 begin
   {$IFDEF TESTINSIGHT}
@@ -35,10 +36,11 @@ begin
       .UseTestInsight
       {$ENDIF}
       .RegisterFixtures([
-        TJsonInterfaceListTests,
         TConfigFeaturesTests,
         TConfigurationHashingTests,
-        THostingEventsTests
+        THostingEventsTests,
+        TJsonInterfaceListTests,
+        TTelemetryTests
       ]));
   except
     on E: Exception do

@@ -123,7 +123,8 @@ contains
   Dext.Core.Debug in 'Debug\Dext.Core.Debug.pas',
   Dext.Templating in 'Core\Base\Dext.Templating.pas',
   Dext.Events.Interfaces in 'Events\Dext.Events.Interfaces.pas',
-  Dext.Text.Escaping in 'Core\Base\Dext.Text.Escaping.pas';
+  Dext.Text.Escaping in 'Core\Base\Dext.Text.Escaping.pas',
+  Dext.Logging.Telemetry in 'Core\Base\Dext.Logging.Telemetry.pas';
 
 end.
 

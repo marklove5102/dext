@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -29,8 +29,12 @@ unit Dext.Web.Pipeline;
 interface
 
 uses
+  System.Diagnostics,
+  System.JSON,
+  System.SysUtils,
   Dext.Collections,
   Dext.Collections.Dict,
+  Dext.Logging.Telemetry,
   Dext.Web.Interfaces, Dext.Web.Routing;
 
 type
@@ -143,9 +147,30 @@ end;
 
 procedure TDextPipeline.Execute(AContext: IHttpContext);
 begin
-  // Just execute the complete pipeline
-  // O roteamento agora está DENTRO do pipeline como um middleware
-  FMiddlewarePipeline(AContext);
+  var SW := TStopwatch.StartNew;
+  try
+    // Just execute the complete pipeline
+    // O roteamento agora está DENTRO do pipeline como um middleware
+    FMiddlewarePipeline(AContext);
+    
+    var Payload := TJSONObject.Create;
+    Payload.AddPair('method', AContext.Request.Method);
+    Payload.AddPair('url', AContext.Request.Path);
+    Payload.AddPair('status', TJSONNumber.Create(AContext.Response.StatusCode));
+    
+    TDiagnosticSource.Instance.Write('HTTP.Request', Payload, 'HTTP', SW.ElapsedMilliseconds);
+  except
+    on E: Exception do
+    begin
+      var Payload := TJSONObject.Create;
+      Payload.AddPair('method', AContext.Request.Method);
+      Payload.AddPair('url', AContext.Request.Path);
+      Payload.AddPair('error', E.Message);
+      
+      TDiagnosticSource.Instance.Write('HTTP.Request', Payload, 'HTTP', SW.ElapsedMilliseconds, 'Error', E.Message);
+      raise;
+    end;
+  end;
 end;
 
 //procedure TDextPipeline.Execute(AContext: IHttpContext);

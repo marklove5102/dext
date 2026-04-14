@@ -24,6 +24,7 @@ Status | Task | Spec | Description
 🔴 | **High-Perf Reflection** | [S07](Specs/S07-High-Perf-Reflection.md) | Type Handler Registry to eliminate RTTI/TValue overhead.
 ✅ | **Advanced Scaffolding** | [S01](Specs/S01-Advanced-Scaffolding.md) | New CLI template engine (`dext new`, `dext add`).
 ✅ | **Template Engine** | [S09](Specs/S09-Template-Engine.md) | Zero-dependency AST-based template engine (Razor-like).
+✅ | **Schema Migrations** | [S11](Specs/S11-Migration-Finalization.md) | Attribute-based renaming detection and CLI automation.
 🟡 | **Dext IDE Explorer** | [S05](Specs/S05-Advanced-Tooling.md) | Initial visual tool for Migrations inside the IDE.
 🟡 | **Production Middleware** | - | SPA Fallback, Forwarded Headers, and Resilience.
 
@@ -32,7 +33,7 @@ Status | Task | Spec | Description
 :---: | :--- | :---: | :---
 🟡 | **gRPC & Protobuf** | [S02](Specs/S02-Modernizer-gRPC.md) | Native IOCP/EPOLL engine for high-speed binary communication.
 🟡 | **OAuth2 & OIDC** | [S06](Specs/S06-Security-Identity.md) | Native support for JWT, Google, and Microsoft Login.
-🔴 | **Live Tracing** | [S03](Specs/S03-Live-Observability.md) | Real-time instrumentation and observability dashboard.
+✅ | **Live Tracing (Core)** | [S03](Specs/S03-Live-Observability.md) | Real-time instrumentation infrastructure (TDiagnosticSource).
 🔴 | **EntityDataSet Providers** | - | Pluggable providers (REST/gRPC) for EntityDataSet.
 
 ## 🔮 Future / Post-V1
@@ -59,6 +60,7 @@ Status | Tarefa | Spec | Descrição
 🔴 | **High-Perf Reflection** | [S07](Specs/S07-High-Perf-Reflection.md) | Registry de Handlers para eliminar overhead de RTTI/TValue.
 ✅ | **Scaffolding Avançado** | [S01](Specs/S01-Advanced-Scaffolding.md) | Novo motor de templates CLI (`dext new`, `dext add`).
 ✅ | **Motor de Templates** | [S09](Specs/S09-Template-Engine.md) | Motor de templates baseado em AST, zero dependência (estilo Razor).
+✅ | **Migrations de Schema** | [S11](Specs/S11-Migration-Finalization.md) | Detecção de renomeação por atributos e automação CLI.
 🟡 | **Dext IDE Explorer** | [S05](Specs/S05-Advanced-Tooling.md) | Ferramenta visual inicial para Migrations na IDE.
 🟡 | **Middleware Pack** | - | SPA Fallback, Forwarded Headers e Resiliência.
 
@@ -67,7 +69,7 @@ Status | Tarefa | Spec | Descrição
 :---: | :--- | :---: | :---
 🟡 | **gRPC & Protobuf** | [S02](Specs/S02-Modernizer-gRPC.md) | Motor nativo IOCP/EPOLL para comunicação binária.
 🟡 | **OAuth2 & OIDC** | [S06](Specs/S06-Security-Identity.md) | Suporte nativo a JWT, Google/Microsoft Login.
-🔴 | **Tracing Distribuído** | [S03](Specs/S03-Live-Observability.md) | Dashboard de instrumentação em tempo real.
+✅ | **Live Tracing (Core)** | [S03](Specs/S03-Live-Observability.md) | Infraestrutura de instrumentação em tempo real.
 🔴 | **Provider de EntityDataSet** | - | Providers plugáveis (REST/gRPC) para o EntityDataSet.
 
 ## 🔮 Futuro / Pós-V1
@@ -76,4 +78,4 @@ Status | Tarefa | Spec | Descrição
 - [ ] **Microservices Mesh**: Service discovery e Load Balancing nativo.
 
 ---
-*Last update: April 13, 2026*
+*Last update: April 14, 2026*

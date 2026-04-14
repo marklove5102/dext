@@ -44,6 +44,18 @@ type
   end;
 
   /// <summary>
+  ///   Marks a class or property as renamed from a previous version.
+  ///   Used by the migration engine to generate RENAME operations instead of DROP/ADD.
+  /// </summary>
+  RenamedFromAttribute = class(TCustomAttribute)
+  private
+    FOldName: string;
+  public
+    constructor Create(const AOldName: string);
+    property OldName: string read FOldName;
+  end;
+
+  /// <summary>
   ///   Marks a property for lazy loading.
   /// </summary>
   LazyAttribute = class(TCustomAttribute)
@@ -502,6 +514,13 @@ type
   end;
 
 implementation
+
+{ RenamedFromAttribute }
+
+constructor RenamedFromAttribute.Create(const AOldName: string);
+begin
+  FOldName := AOldName;
+end;
 
 { TableAttribute }
 

@@ -45,6 +45,7 @@ type
     IsPrimaryKey: Boolean;
     IsIdentity: Boolean;
     DefaultValue: string;
+    RenamedFrom: string;
     
     function Equals(Obj: TObject): Boolean; override;
     function Clone: TSnapshotColumn;
@@ -67,6 +68,7 @@ type
     Name: string;
     Columns: IList<TSnapshotColumn>;
     ForeignKeys: IList<TSnapshotForeignKey>;
+    RenamedFrom: string;
     
     constructor Create;
     destructor Destroy; override;
@@ -100,6 +102,7 @@ begin
   Result.IsPrimaryKey := IsPrimaryKey;
   Result.IsIdentity := IsIdentity;
   Result.DefaultValue := DefaultValue;
+  Result.RenamedFrom := RenamedFrom;
 end;
 
 function TSnapshotColumn.Equals(Obj: TObject): Boolean;
@@ -120,7 +123,8 @@ begin
             (IsNullable = Other.IsNullable) and
             (IsPrimaryKey = Other.IsPrimaryKey) and
             (IsIdentity = Other.IsIdentity) and
-            (DefaultValue = Other.DefaultValue);
+            (DefaultValue = Other.DefaultValue) and
+            (RenamedFrom = Other.RenamedFrom);
 end;
 
 { TSnapshotForeignKey }

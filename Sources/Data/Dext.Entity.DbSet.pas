@@ -288,6 +288,9 @@ implementation
 
 uses
   Data.DB,
+  System.Diagnostics,
+  System.JSON,
+  Dext.Logging.Telemetry,
   Dext.Entity.ProxyFactory,
   Dext.Utils;
 
@@ -382,10 +385,18 @@ var
 begin
   if not FInitialized then
   begin
-    Cmd := FDbSet.FContext.Connection.CreateCommand(FSql);
-    Cmd.BindSequentialParams(FParams);
-    FReader := Cmd.ExecuteQuery;
-    FInitialized := True;
+    var SW := TStopwatch.StartNew;
+    try
+      FReader := Cmd.ExecuteQuery;
+      FInitialized := True;
+      TDiagnosticSource.Instance.Write('SQL.Query', TJSONObject.Create(TJSONPair.Create('sql', FSql)), 'SQL', SW.ElapsedMilliseconds);
+    except
+      on E: Exception do
+      begin
+        TDiagnosticSource.Instance.Write('SQL.Query', TJSONObject.Create(TJSONPair.Create('sql', FSql)), 'SQL', SW.ElapsedMilliseconds, 'Error', E.Message);
+        raise;
+      end;
+    end;
   end;
   
   if FReader.Next then
@@ -1144,14 +1155,46 @@ begin
     end;
     if UseReturning then
     begin
-      RetVal := Cmd.ExecuteScalar;
+      var SW := TStopwatch.StartNew;
+      try
+        RetVal := Cmd.ExecuteScalar;
+        var Payload := TJSONObject.Create;
+        Payload.AddPair('sql', Sql);
+        Payload.AddPair('rows', 1);
+        TDiagnosticSource.Instance.Write('SQL.Insert', Payload, 'SQL', SW.ElapsedMilliseconds);
+      except
+        on E: Exception do
+        begin
+          var Payload := TJSONObject.Create;
+          Payload.AddPair('sql', Sql);
+          Payload.AddPair('rows', 1);
+          TDiagnosticSource.Instance.Write('SQL.Insert', Payload, 'SQL', SW.ElapsedMilliseconds, 'Error', E.Message);
+          raise;
+        end;
+      end;
       RawPKVal := RetVal;
       // We no longer call RetVal.AsVariant because calling AsVariant on a TGUID Record TValue 
       // throws an EInvalidCast ('Invalid class typecast') natively in Delphi.
     end
     else
     begin
-      Cmd.ExecuteNonQuery;
+      var SW := TStopwatch.StartNew;
+      try
+        Cmd.ExecuteNonQuery;
+        var Payload := TJSONObject.Create;
+        Payload.AddPair('sql', Sql);
+        Payload.AddPair('rows', 1);
+        TDiagnosticSource.Instance.Write('SQL.Insert', Payload, 'SQL', SW.ElapsedMilliseconds);
+      except
+        on E: Exception do
+        begin
+          var Payload := TJSONObject.Create;
+          Payload.AddPair('sql', Sql);
+          Payload.AddPair('rows', 1);
+          TDiagnosticSource.Instance.Write('SQL.Insert', Payload, 'SQL', SW.ElapsedMilliseconds, 'Error', E.Message);
+          raise;
+        end;
+      end;
       if AutoIncColumn <> '' then
       begin
          var LastIdSQL := FContext.Dialect.GetLastInsertIdSQL;
@@ -1283,7 +1326,23 @@ begin
       else
         Cmd.AddParam(Pair.Key, Pair.Value);
     end;
-    RowsAffected := Cmd.ExecuteNonQuery;
+    var SW := TStopwatch.StartNew;
+    try
+      RowsAffected := Cmd.ExecuteNonQuery;
+      var Payload := TJSONObject.Create;
+      Payload.AddPair('sql', Sql);
+      Payload.AddPair('rows', RowsAffected);
+      TDiagnosticSource.Instance.Write('SQL.Update', Payload, 'SQL', SW.ElapsedMilliseconds);
+    except
+      on E: Exception do
+      begin
+        var Payload := TJSONObject.Create;
+        Payload.AddPair('sql', Sql);
+        Payload.AddPair('rows', 0);
+        TDiagnosticSource.Instance.Write('SQL.Update', Payload, 'SQL', SW.ElapsedMilliseconds, 'Error', E.Message);
+        raise;
+      end;
+    end;
     if RowsAffected = 0 then
       raise EOptimisticConcurrencyException.Create('Concurrency violation: The record has been modified or deleted by another user.');
     Ctx := TRttiContext.Create;
@@ -1447,7 +1506,23 @@ begin
       else
         Cmd.AddParam(Pair.Key, Pair.Value);
     end;
-    Cmd.ExecuteNonQuery;
+    var SW := TStopwatch.StartNew;
+    try
+      var RowsAffected := Cmd.ExecuteNonQuery;
+      var Payload := TJSONObject.Create;
+      Payload.AddPair('sql', Sql);
+      Payload.AddPair('rows', RowsAffected);
+      TDiagnosticSource.Instance.Write('SQL.Delete', Payload, 'SQL', SW.ElapsedMilliseconds);
+    except
+      on E: Exception do
+      begin
+        var Payload := TJSONObject.Create;
+        Payload.AddPair('sql', Sql);
+        Payload.AddPair('rows', 0);
+        TDiagnosticSource.Instance.Write('SQL.Delete', Payload, 'SQL', SW.ElapsedMilliseconds, 'Error', E.Message);
+        raise;
+      end;
+    end;
     FIdentityMap.Remove(GetEntityId(T(AEntity)));
   finally
     Generator.Free;
@@ -1783,12 +1858,20 @@ begin
     end;
     
     try
+      var SW := TStopwatch.StartNew;
       Reader := Cmd.ExecuteQuery;
+      var RowCount := 0;
       while Reader.Next do
       begin
+        Inc(RowCount);
         Entity := Hydrate(Reader, Tracking);
         Result.Add(Entity);
       end;
+      
+      var Payload := TJSONObject.Create;
+      Payload.AddPair('sql', Sql);
+      Payload.AddPair('rows', RowCount);
+      TDiagnosticSource.Instance.Write('SQL.Query', Payload, 'SQL', SW.ElapsedMilliseconds);
     except
       on E: Exception do
       begin

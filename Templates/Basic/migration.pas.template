@@ -1,0 +1,38 @@
+unit {{Model.MigrationName}};
+
+interface
+
+uses
+  System.SysUtils,
+  Dext.Entity.Migrations;
+
+type
+  [Migration('{{Model.Id}}', '{{Model.Description}}')]
+  T{{Model.MigrationName}} = class(TMigration)
+  public
+    procedure Up(const AMigrationBuilder: IMigrationBuilder); override;
+    procedure Down(const AMigrationBuilder: IMigrationBuilder); override;
+  end;
+
+implementation
+
+{ T{{Model.MigrationName}} }
+
+procedure T{{Model.MigrationName}}.Up(const AMigrationBuilder: IMigrationBuilder);
+begin
+{% for Op in Model.UpOperations %}
+  {{Op.Render}}
+{% endfor %}
+end;
+
+procedure T{{Model.MigrationName}}.Down(const AMigrationBuilder: IMigrationBuilder);
+begin
+{% for Op in Model.DownOperations %}
+  {{Op.Render}}
+{% endfor %}
+end;
+
+initialization
+  TMigrationRegistry.RegisterMigration(T{{Model.MigrationName}});
+
+end.

@@ -45,6 +45,9 @@ type
     otDropForeignKey,
     otCreateIndex,
     otDropIndex,
+    otRenameTable,
+    otRenameColumn,
+    otSeedData,
     otSql // Raw SQL fallback
   );
 
@@ -200,6 +203,40 @@ type
     property Name: string read FName;
   end;
   
+  TRenameTableOperation = class(TMigrationOperation)
+  private
+    FOldName: string;
+    FNewName: string;
+  public
+    constructor Create(const AOldName, ANewName: string);
+    property OldName: string read FOldName;
+    property NewName: string read FNewName;
+  end;
+
+  TRenameColumnOperation = class(TMigrationOperation)
+  private
+    FTableName: string;
+    FOldName: string;
+    FNewName: string;
+  public
+    constructor Create(const ATableName, AOldName, ANewName: string);
+    property TableName: string read FTableName;
+    property OldName: string read FOldName;
+    property NewName: string read FNewName;
+  end;
+
+  TSeedDataOperation = class(TMigrationOperation)
+  private
+    FTableName: string;
+    FData: TArray<TArray<Variant>>;
+    FColumns: TArray<string>;
+  public
+    constructor Create(const ATableName: string; const AColumns: TArray<string>; const AData: TArray<TArray<Variant>>);
+    property TableName: string read FTableName;
+    property Columns: TArray<string> read FColumns;
+    property Data: TArray<TArray<Variant>> read FData;
+  end;
+
   TSqlOperation = class(TMigrationOperation)
   private
     FSql: string;
@@ -330,6 +367,35 @@ begin
   inherited Create(otDropIndex);
   FTable := ATable;
   FName := AName;
+end;
+
+{ TRenameTableOperation }
+
+constructor TRenameTableOperation.Create(const AOldName, ANewName: string);
+begin
+  inherited Create(otRenameTable);
+  FOldName := AOldName;
+  FNewName := ANewName;
+end;
+
+{ TRenameColumnOperation }
+
+constructor TRenameColumnOperation.Create(const ATableName, AOldName, ANewName: string);
+begin
+  inherited Create(otRenameColumn);
+  FTableName := ATableName;
+  FOldName := AOldName;
+  FNewName := ANewName;
+end;
+
+{ TSeedDataOperation }
+
+constructor TSeedDataOperation.Create(const ATableName: string; const AColumns: TArray<string>; const AData: TArray<TArray<Variant>>);
+begin
+  inherited Create(otSeedData);
+  FTableName := ATableName;
+  FColumns := AColumns;
+  FData := AData;
 end;
 
 { TSqlOperation }

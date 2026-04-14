@@ -34,6 +34,7 @@ uses
   Data.DB,
   Dext.Types.UUID,
   Dext.Entity.Attributes,
+  System.Variants,
   Dext.Entity.Migrations.Operations,
   Dext.Specifications.Interfaces;
 
@@ -66,6 +67,7 @@ type
     function GetParamPrefix: string;
     function GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string;
     function BooleanToSQL(AValue: Boolean): string;
+    function VariantToSQL(const AValue: Variant): string;
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string;
     function GetColumnTypeForField(AFieldType: TFieldType; AIsAutoInc: Boolean = False): string;
     function GetCascadeActionSQL(AAction: TCascadeAction): string;
@@ -100,6 +102,9 @@ type
 
     // Locking Support
     function GetLockingSQL(ALockMode: TLockMode): string;
+
+    // Seed Data Support
+    function GenerateSeedData(AOp: TSeedDataOperation): string;
   end;
   {$M-}
 
@@ -129,6 +134,9 @@ type
     function GenerateDropForeignKey(AOp: TDropForeignKeyOperation): string; virtual;
     function GenerateCreateIndex(AOp: TCreateIndexOperation): string; virtual;
     function GenerateDropIndex(AOp: TDropIndexOperation): string; virtual;
+    function GenerateRenameTable(AOp: TRenameTableOperation): string; virtual;
+    function GenerateRenameColumn(AOp: TRenameColumnOperation): string; virtual;
+    function GenerateSeedData(AOp: TSeedDataOperation): string; virtual;
   public
     function GetSetSchemaSQL(const ASchemaName: string): string; virtual;
     function GetCreateSchemaSQL(const ASchemaName: string): string; virtual;
@@ -137,6 +145,7 @@ type
     function GetParamPrefix: string; virtual;
     function GeneratePaging(const ASQL: string; ASkip, ATake: Integer): string; virtual; abstract;
     function BooleanToSQL(AValue: Boolean): string; virtual;
+    function VariantToSQL(const AValue: Variant): string; virtual;
     function GetColumnType(ATypeInfo: PTypeInfo; AIsAutoInc: Boolean = False): string; virtual; abstract;
     function GetColumnTypeForField(AFieldType: TFieldType; AIsAutoInc: Boolean = False): string; virtual;
     function GetCascadeActionSQL(AAction: TCascadeAction): string; virtual;
@@ -438,6 +447,27 @@ begin
   if AValue then Result := '1' else Result := '0';
 end;
 
+function TBaseDialect.VariantToSQL(const AValue: Variant): string;
+begin
+  if VarIsNull(AValue) or VarIsClear(AValue) then
+    Result := 'NULL'
+  else
+  case VarType(AValue) of
+    varSmallint, varInteger, varByte, varShortInt, varWord, varLongWord, varInt64:
+      Result := IntToStr(AValue);
+    varSingle, varDouble, varCurrency:
+      Result := FloatToStr(AValue, TFormatSettings.Invariant);
+    varDate:
+      Result := QuotedStr(FormatDateTime('yyyy-mm-dd hh:nn:ss', AValue));
+    varBoolean:
+      Result := BooleanToSQL(AValue);
+    varUString, varString, varOleStr:
+      Result := QuotedStr(AValue);
+  else
+    Result := QuotedStr(VarToStr(AValue));
+  end;
+end;
+
 function TBaseDialect.GetParamPrefix: string;
 begin
   Result := ':'; // Standard for FireDAC
@@ -478,6 +508,9 @@ begin
     otDropForeignKey: Result := GenerateDropForeignKey(TDropForeignKeyOperation(AOperation));
     otCreateIndex: Result := GenerateCreateIndex(TCreateIndexOperation(AOperation));
     otDropIndex: Result := GenerateDropIndex(TDropIndexOperation(AOperation));
+    otRenameTable: Result := GenerateRenameTable(TRenameTableOperation(AOperation));
+    otRenameColumn: Result := GenerateRenameColumn(TRenameColumnOperation(AOperation));
+    otSeedData: Result := GenerateSeedData(TSeedDataOperation(AOperation));
     otSql: Result := TSqlOperation(AOperation).Sql;
   else
     Result := '-- Unknown operation';
@@ -660,6 +693,45 @@ end;
 function TBaseDialect.GenerateDropIndex(AOp: TDropIndexOperation): string;
 begin
   Result := 'DROP INDEX ' + QuoteIdentifier(AOp.Name);
+end;
+
+function TBaseDialect.GenerateRenameTable(AOp: TRenameTableOperation): string;
+begin
+  Result := Format('ALTER TABLE %s RENAME TO %s', [QuoteIdentifier(AOp.OldName), QuoteIdentifier(AOp.NewName)]);
+end;
+
+function TBaseDialect.GenerateRenameColumn(AOp: TRenameColumnOperation): string;
+begin
+  // Standard SQL: ALTER TABLE x RENAME COLUMN y TO z
+  Result := Format('ALTER TABLE %s RENAME COLUMN %s TO %s',
+    [QuoteIdentifier(AOp.TableName), QuoteIdentifier(AOp.OldName), QuoteIdentifier(AOp.NewName)]);
+end;
+
+function TBaseDialect.GenerateSeedData(AOp: TSeedDataOperation): string;
+var
+  Cols, Values, SQL: string;
+  i, j: Integer;
+begin
+  Cols := '';
+  for i := 0 to High(AOp.Columns) do
+  begin
+    if i > 0 then Cols := Cols + ', ';
+    Cols := Cols + QuoteIdentifier(AOp.Columns[i]);
+  end;
+
+  SQL := '';
+  for i := 0 to High(AOp.Data) do
+  begin
+    Values := '';
+    for j := 0 to High(AOp.Data[i]) do
+    begin
+      if j > 0 then Values := Values + ', ';
+      Values := Values + VariantToSQL(AOp.Data[i][j]);
+    end;
+    SQL := SQL + Format('INSERT INTO %s (%s) VALUES (%s);' + sLineBreak,
+      [QuoteIdentifier(AOp.TableName), Cols, Values]);
+  end;
+  Result := SQL;
 end;
 
 { TSQLiteDialect }

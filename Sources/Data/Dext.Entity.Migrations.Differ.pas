@@ -77,8 +77,27 @@ begin
     for CurrTable in Current.Tables do
     begin
       PrevTable := nil;
-      if Previous <> nil then
+      if (Previous <> nil) then
+      begin
         PrevTable := Previous.FindTable(CurrTable.Name);
+        
+        // Check for Table Rename
+        if (PrevTable = nil) and (CurrTable.RenamedFrom <> '') then
+        begin
+          PrevTable := Previous.FindTable(CurrTable.RenamedFrom);
+          if PrevTable <> nil then
+          begin
+            // Verify the old table name is NOT used by another table in current model
+            if (Current.FindTable(CurrTable.RenamedFrom) = nil) then
+            begin
+              Ops.Add(TRenameTableOperation.Create(CurrTable.RenamedFrom, CurrTable.Name));
+              // Now we can continue diffing CurrTable against PrevTable as if they were the same entity
+            end
+            else
+              PrevTable := nil; // Collision: Old name reused for a new table, treat as New Table
+          end;
+        end;
+      end;
         
       if PrevTable = nil then
       begin
@@ -121,13 +140,30 @@ begin
         for CurrCol in CurrTable.Columns do
         begin
           PrevCol := PrevTable.FindColumn(CurrCol.Name);
+          
+          // Check for Column Rename
+          if (PrevCol = nil) and (CurrCol.RenamedFrom <> '') then
+          begin
+            PrevCol := PrevTable.FindColumn(CurrCol.RenamedFrom);
+            if PrevCol <> nil then
+            begin
+               // Verify old name not used in current table
+               if (CurrTable.FindColumn(CurrCol.RenamedFrom) = nil) then
+               begin
+                 Ops.Add(TRenameColumnOperation.Create(CurrTable.Name, CurrCol.RenamedFrom, CurrCol.Name));
+               end
+               else
+                 PrevCol := nil;
+            end;
+          end;
+
           if PrevCol = nil then
           begin
             Ops.Add(TAddColumnOperation.Create(CurrTable.Name, ToDef(CurrCol)));
           end
           else
           begin
-            // B. Changed Columns
+            // B. Changed Columns (or potentially changed after rename)
             if not CurrCol.Equals(PrevCol) then
             begin
               Ops.Add(TAlterColumnOperation.Create(CurrTable.Name, ToDef(CurrCol)));
@@ -138,7 +174,16 @@ begin
         // C. Dropped Columns
         for PrevCol in PrevTable.Columns do
         begin
-          if CurrTable.FindColumn(PrevCol.Name) = nil then
+          // Check if column was dropped (not renamed)
+          var StillExists := False;
+          for var C in CurrTable.Columns do
+            if SameText(C.Name, PrevCol.Name) or SameText(C.RenamedFrom, PrevCol.Name) then
+            begin
+              StillExists := True;
+              Break;
+            end;
+
+          if not StillExists then
           begin
             Ops.Add(TDropColumnOperation.Create(CurrTable.Name, PrevCol.Name));
           end;
@@ -155,7 +200,18 @@ begin
   begin
     for PrevTable in Previous.Tables do
     begin
-      if (Current = nil) or (Current.FindTable(PrevTable.Name) = nil) then
+      var StillExists := False;
+      if Current <> nil then
+      begin
+        for var T in Current.Tables do
+          if SameText(T.Name, PrevTable.Name) or SameText(T.RenamedFrom, PrevTable.Name) then
+          begin
+            StillExists := True;
+            Break;
+          end;
+      end;
+
+      if not StillExists then
       begin
         Ops.Add(TDropTableOperation.Create(PrevTable.Name));
       end;

@@ -1,6 +1,21 @@
-# Migrations
+# Migrações
 
-Controle de versão para o schema do seu banco de dados. O Dext suporta tanto migrations **baseadas em Pascal** (compiladas) quanto **baseadas em JSON** (externas).
+Controle de versão para o seu esquema de banco de dados. O Dext suporta migrações baseadas em **Pascal** (compiladas) e **JSON** (externas).
+
+## Detecção Automática de Renomeação
+A partir da versão 2.1, o Dext suporta renomeações não destrutivas através do atributo `[RenamedFrom]`.
+
+```pascal
+[Table('Users')]
+[RenamedFrom('LegacyUsers')] // Informa ao migrador que anteriormente era 'LegacyUsers'
+TUser = class
+private
+  [RenamedFrom('FullName')] // Informa ao migrador que era 'FullName'
+  FName: string;
+...
+```
+
+Ao adicionar uma migração, o Dext gerará uma operação de `Rename` em vez de um par `Drop` e `Add`, preservando seus dados.
 
 ## Criando uma Migration Pascal
 
@@ -115,8 +130,20 @@ Builder.AddColumn('users', 'phone', 'VARCHAR', 20);
 // Remove uma coluna
 Builder.DropColumn('users', 'legacy_field');
 
-// Cria um Índice
+// Criar um Índice
 Builder.CreateIndex('users', 'IX_Users_Email', ['Email'], True);
+
+// Renomear uma tabela (v2.1+)
+Builder.RenameTable('nome_antigo', 'nome_novo');
+
+// Renomear uma coluna (v2.1+)
+Builder.RenameColumn('users', 'col_antiga', 'col_nova');
+
+// Semear (Seed) dados durante a migração
+Builder.Seed('settings', TJSONObject.Create
+  .AddPair('key', 'theme')
+  .AddPair('value', 'dark')
+);
 ```
 
 ### Execução (Safety Handshake)
