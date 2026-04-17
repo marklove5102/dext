@@ -1,7 +1,7 @@
 # S12 — Advanced Template Engine: Finalization & Feature Parity
 
 > **Status:** 📝 Draft — April 16, 2026  
-> Spec criada a partir de solicitação de usuário + análise competitiva contra TemplatePro e WebStencils.
+> Spec criada a partir de solicitação de usuário + análise comparativa contra TemplatePro e WebStencils.
 
 ---
 
@@ -18,10 +18,9 @@ O Dext possui um motor de templates AST-based (`Dext.Templating`) funcional mas 
 | **Dext.Templating** (atual) | `@var` | ❌ | ❌ | 5 (scaffolding) | ❌ | ❌ |
 | **ASP.NET Razor** (référence) | `@expr` | ✅ `@section` | `@RenderPartial` | N/A | N/A | ✅ C# |
 
-### 1.2 O Que o Usuário Pediu
+### 1.2 Features Desejadas
 - Herança de templates (layouts + blocos)
 - Partials (includes reutilizáveis)
-- Superar TemplatePro em features
 - Feature parity com .NET Razor
 
 ### 1.3 Estado Atual do Motor
@@ -46,7 +45,7 @@ O `Dext.Templating.pas` tem:
 
 ## 2. Objetivo
 
-Tornar o `Dext.Templating` o **melhor motor de templates para Delphi**, superando TemplatePro e WebStencils em:
+Tornar o `Dext.Templating` o **melhor motor de templates para Delphi**:
 1. **Completude de features** — paridade com Razor/.NET
 2. **Performance** — AST compilado, cache de parsed templates
 3. **Integração nativa** — RTTI, Dext ORM Streaming, Smart Properties
@@ -118,7 +117,7 @@ O Engine deve ser injetado no nó para que possa chamar `ResolveExpression`.
 
 Expandir o registry de filtros para cobrir casos de uso web e email.
 
-#### 2.1 Filtros de String (parity TemplatePro)
+#### 2.1 Filtros de String
 | Filtro | Comportamento | Exemplo |
 |---|---|---|
 | `uppercase` | Tudo maiúsculo | `@Name.uppercase()` |
@@ -226,7 +225,7 @@ Um template filho declara o layout que deve envolvê-lo:
 - `@renderSection('name', required: false)` — Bloco opcional
 - `@renderBody` — Renderiza todo o conteúdo do filho (layout) — equivalente ao Razor
 
-#### 3.3 `@extends` — Herança Multi-Nível (TemplatePro parity)
+#### 3.3 `@extends` — Herança Multi-Nível
 Suporte a herança profunda (layout filho que herda de layout pai):
 
 ```html
@@ -388,7 +387,7 @@ Em vez de exception genérica, erros devem incluir:
 
 ### Fase 6 — Integrações Nativas Dext
 
-#### 6.1 TDataSet como Fonte de Loop (parity TemplatePro)
+#### 6.1 TDataSet como Fonte de Loop
 ```
 @foreach (var row in Customers)
   <tr>
@@ -451,7 +450,7 @@ if Request.Headers.ContainsKey('HX-Request') then
 | **F1: Core (Render stubs)** | 1 dia | 🔴 Crítico | Nada funciona sem isso |
 | **F2: Filtros de Produção** | 2 dias | 🔴 Alta | Necessário para HTML |
 | **F3: Herança & Partials** | 3-4 dias | 🔴 Alta | User request direto |
-| **F4: Fluxo Avançado** | 2 dias | 🟡 Média | Superar TemplatePro |
+| **F4: Fluxo Avançado** | 2 dias | 🟡 Média | Features avançadas |
 | **F5: Features Produção** | 3 dias | 🟡 Média | Cache + error reporting |
 | **F6: Integrações Dext** | 1-2 dias | 🟢 Baixa | Já existe parcialmente |
 
