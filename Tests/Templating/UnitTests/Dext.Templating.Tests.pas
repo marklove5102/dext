@@ -17,9 +17,13 @@ type
     [Test] procedure Test_Nested_Property_Resolution;
     [Test] procedure Test_Conditional_IF_True;
     [Test] procedure Test_Conditional_IF_False;
+    [Test] procedure Test_Conditional_With_Else;
     [Test] procedure Test_Loop_ForEach;
+    [Test] procedure Test_Loop_With_Else_And_Pseudo_Variables;
     [Test] procedure Test_Filters_PascalCase;
     [Test] procedure Test_Filters_CamelCase;
+    [Test] procedure Test_Advanced_Filters_With_Params;
+    [Test] procedure Test_Comparison_Filters_In_If;
     [Test] procedure Test_Escaping;
     [Test] procedure Test_Html_Escaping;
     [Test] procedure Test_Nested_Control_Flow;
@@ -30,6 +34,13 @@ type
     [Test] procedure Test_Filters_Pluralize;
     [Test] procedure Test_Filters_Singularize;
     [Test] procedure Test_Chained_Filters;
+    [Test] procedure Test_Render_Template_With_Layout_Sections_And_Partial;
+    [Test] procedure Test_Inline_Define_And_Macro_Call;
+    [Test] procedure Test_Set_And_Inline_Expression;
+    [Test] procedure Test_Continue_And_Break_In_Loop;
+    [Test] procedure Test_Switch_Case_Default;
+    [Test] procedure Test_Raw_Block_Literal_Output;
+    [Test] procedure Test_Whitespace_Control_With_Tilde;
   end;
 
 implementation
@@ -125,6 +136,21 @@ begin
   Should(Output).Be('');
 end;
 
+procedure TTemplatingTests.Test_Conditional_With_Else;
+var
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+  Output: string;
+begin
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+
+  Context.SetValue('IsActive', 'false');
+  Output := Engine.Render('@if (IsActive)Active@elseInactive@endif', Context);
+
+  Should(Output).Be('Inactive');
+end;
+
 procedure TTemplatingTests.Test_Loop_ForEach;
 var
   Engine: ITemplateEngine;
@@ -162,6 +188,44 @@ begin
   end;
 end;
 
+procedure TTemplatingTests.Test_Loop_With_Else_And_Pseudo_Variables;
+var
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+  Model: TTableViewModel;
+  Col: TColumnViewModel;
+  Output: string;
+begin
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+
+  Model := TTableViewModel.Create;
+  try
+    Col := TColumnViewModel.Create;
+    Col.DelphiName := 'Id';
+    Model.Columns.Add(Col);
+
+    Col := TColumnViewModel.Create;
+    Col.DelphiName := 'Name';
+    Model.Columns.Add(Col);
+
+    Context.SetObject('Model', Model);
+
+    Output := Engine.Render(
+      '@foreach (var col in Model.Columns)' +
+      '@col.@@index:@col.DelphiName(@if (col.@@first)F@endif@if (col.@@last)L@endif);' +
+      '@elseEMPTY@endforeach', Context);
+
+    Should(Output).Contain('1:Id(F);');
+    Should(Output).Contain('2:Name(L);');
+
+    Output := Engine.Render('@foreach (var item in Items)X@elseEMPTY@endforeach', Context);
+    Should(Output).Be('EMPTY');
+  finally
+    Model.Free;
+  end;
+end;
+
 procedure TTemplatingTests.Test_Filters_PascalCase;
 var
   Engine: ITemplateEngine;
@@ -192,6 +256,38 @@ begin
   Output := Engine.Render('@Name.ToCamelCase()', Context);
   
   Should(Output).Be('userName');
+end;
+
+procedure TTemplatingTests.Test_Advanced_Filters_With_Params;
+var
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+begin
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+
+  Context.SetValue('Name', '  user profile  ');
+  Context.SetValue('EmptyName', '');
+  Context.SetValue('Bio', 'abcdefghijklmnopqrstuvwxyz');
+
+  Should(Engine.Render('@Name.trim().uppercase()', Context)).Be('USER PROFILE');
+  Should(Engine.Render('@EmptyName.default(''N/A'')', Context)).Be('N/A');
+  Should(Engine.Render('@Bio.truncate(5, ''~'')', Context)).Be('abcde~');
+end;
+
+procedure TTemplatingTests.Test_Comparison_Filters_In_If;
+var
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+  Output: string;
+begin
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+
+  Context.SetValue('Status', 'active');
+  Output := Engine.Render('@if (Status.eq(''active''))OK@elseFAIL@endif', Context);
+
+  Should(Output).Be('OK');
 end;
 
 procedure TTemplatingTests.Test_Escaping;
@@ -402,6 +498,202 @@ begin
   Output := Engine.Render('@Name.ToPascalCase().Pluralize()', Context);
   
   Should(Output).Be('UserCategories');
+end;
+
+procedure TTemplatingTests.Test_Render_Template_With_Layout_Sections_And_Partial;
+var
+  Engine: TDextTemplateEngine;
+  Context: ITemplateContext;
+  Loader: TInMemoryTemplateLoader;
+  Output: string;
+begin
+  Loader := TInMemoryTemplateLoader.Create;
+  Loader.AddTemplate('views\products\index.html',
+    '@layout(''shared/_Layout'')' + sLineBreak +
+    '@section(''title'')Produtos@endsection' + sLineBreak +
+    '@section(''content'')' + sLineBreak +
+    '<h1>@PageTitle</h1>' + sLineBreak +
+    '@partial(''components/_Badge'', status: Status)' + sLineBreak +
+    '@endsection');
+  Loader.AddTemplate('views\shared\_Layout.html',
+    '<html><head><title>@renderSection(''title'')</title></head><body>@renderSection(''content'')</body></html>');
+  Loader.AddTemplate('views\components\_Badge.html',
+    '<span class="badge">@status.uppercase()</span>');
+
+  Engine := TDextTemplateEngine.Create(Loader);
+  try
+    Engine.TemplateRoot := 'views';
+    Context := TTemplating.CreateContext;
+    Context.SetValue('PageTitle', 'Catalogo');
+    Context.SetValue('Status', 'active');
+
+    Output := Engine.RenderTemplate('products/index.html', Context);
+
+    Should(Output).Contain('<title>Produtos</title>');
+    Should(Output).Contain('<h1>Catalogo</h1>');
+    Should(Output).Contain('<span class="badge">ACTIVE</span>');
+  finally
+    Engine.Free;
+  end;
+end;
+
+procedure TTemplatingTests.Test_Inline_Define_And_Macro_Call;
+var
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+  Output: string;
+begin
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+
+  Output := Engine.Render(
+    '@define(''badge'', status)' + sLineBreak +
+    '<span>@status.uppercase()</span>' + sLineBreak +
+    '@enddefine' + sLineBreak +
+    '@> badge(''active'')', Context);
+
+  Should(Output).Contain('<span>ACTIVE</span>');
+end;
+
+procedure TTemplatingTests.Test_Set_And_Inline_Expression;
+var
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+  Model: TTableViewModel;
+  Col: TColumnViewModel;
+  Output: string;
+begin
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+
+  Model := TTableViewModel.Create;
+  try
+    Col := TColumnViewModel.Create;
+    Col.DelphiName := 'A';
+    Model.Columns.Add(Col);
+    Col := TColumnViewModel.Create;
+    Col.DelphiName := 'B';
+    Model.Columns.Add(Col);
+    Context.SetObject('Model', Model);
+    Context.SetValue('FirstName', 'John');
+    Context.SetValue('LastName', 'Doe');
+
+    Output := Engine.Render(
+      '@set total = 2 + 3' + sLineBreak +
+      '@set full = @(FirstName + '' '' + LastName)' + sLineBreak +
+      '@foreach (var col in Model.Columns)' + sLineBreak +
+      '  @set total = @total + 1' + sLineBreak +
+      '@endforeach' + sLineBreak +
+      'Total=@total;Full=@full;Expr=@(3 * 4)', Context);
+
+    Should(Output).Contain('Total=7');
+    Should(Output).Contain('Full=John Doe');
+    Should(Output).Contain('Expr=12');
+  finally
+    Model.Free;
+  end;
+end;
+
+procedure TTemplatingTests.Test_Continue_And_Break_In_Loop;
+var
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+  Model: TTableViewModel;
+  Col: TColumnViewModel;
+  Output: string;
+begin
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+
+  Model := TTableViewModel.Create;
+  try
+    Col := TColumnViewModel.Create; Col.DelphiName := 'Id'; Model.Columns.Add(Col);
+    Col := TColumnViewModel.Create; Col.DelphiName := 'Skip'; Model.Columns.Add(Col);
+    Col := TColumnViewModel.Create; Col.DelphiName := 'Name'; Model.Columns.Add(Col);
+    Col := TColumnViewModel.Create; Col.DelphiName := 'Stop'; Model.Columns.Add(Col);
+    Col := TColumnViewModel.Create; Col.DelphiName := 'Tail'; Model.Columns.Add(Col);
+    Context.SetObject('Model', Model);
+
+    Output := Engine.Render(
+      '@foreach (var col in Model.Columns)' +
+      '@if (col.DelphiName.eq(''Skip''))@continue@endif' +
+      '@if (col.DelphiName.eq(''Stop''))@break@endif' +
+      '@col.DelphiName;' +
+      '@endforeach', Context);
+
+    Should(Output).Contain('Id;');
+    Should(Output).Contain('Name;');
+    Should(Output).NotContain('Skip;');
+    Should(Output).NotContain('Stop;');
+    Should(Output).NotContain('Tail;');
+  finally
+    Model.Free;
+  end;
+end;
+
+procedure TTemplatingTests.Test_Switch_Case_Default;
+var
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+  Output: string;
+begin
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+
+  Context.SetValue('Status', 'active');
+  Output := Engine.Render(
+    '@switch (Status)' +
+    '@case (''active'')A' +
+    '@case (''suspended'')S' +
+    '@defaultU' +
+    '@endswitch', Context);
+  Should(Output).Be('A');
+
+  Context.SetValue('Status', 'unknown');
+  Output := Engine.Render(
+    '@switch (Status)' +
+    '@case (''active'')A' +
+    '@defaultU' +
+    '@endswitch', Context);
+  Should(Output).Be('U');
+end;
+
+procedure TTemplatingTests.Test_Raw_Block_Literal_Output;
+var
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+  Output: string;
+begin
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+  Context.SetValue('Name', 'John');
+
+  Output := Engine.Render(
+    '@raw' + sLineBreak +
+    'Literal @Name and @if (true) not parsed @endif' + sLineBreak +
+    '@endraw', Context);
+
+  Should(Output).Contain('Literal @Name and @if (true) not parsed @endif');
+end;
+
+procedure TTemplatingTests.Test_Whitespace_Control_With_Tilde;
+var
+  Engine: ITemplateEngine;
+  Context: ITemplateContext;
+  Output: string;
+begin
+  Engine := TTemplating.CreateEngine;
+  Context := TTemplating.CreateContext;
+  Context.SetValue('Show', 'true');
+
+  Output := Engine.Render(
+    'A   ' + sLineBreak +
+    '@~if (Show)' + sLineBreak +
+    'B' + sLineBreak +
+    '@endif~' + sLineBreak +
+    '   C', Context);
+
+  Should(Output).Be('A' + 'B' + 'C');
 end;
 
 initialization
