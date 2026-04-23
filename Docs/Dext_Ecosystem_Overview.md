@@ -28,6 +28,17 @@ Tudo isso acontece invisível ao desenvolvedor. Essa é a promessa.
 
 ---
 
+## 🌐 Web Server Agnostic: Flexibilidade de Hospedagem
+
+O Dext Web Framework é completamente isolado da implementação do servidor HTTP subjacente. Você escreve a sua aplicação e a sua lógica de rotas uma única vez e escolhe como vai servir esse tráfego dependendo do ambiente e licenciamento, suportando:
+
+1. **Indy (Built-in)**: A escolha padrão. Vem nativo com o Delphi, sem nenhuma dependência externa. Perfeito para APIs internas, microsserviços standalone, testes e desenvolvimento rápido.
+2. **WebBroker (Delphi Professional/Enterprise)**: A escolha para infraestrutura legada ou web servers consolidados. Permite rodar a mesma aplicação Dext como **Módulo Apache**, **ISAPI** (IIS) ou **FastCGI** (para ser servida via NGINX).
+3. **Delphi Cross Sockets - DCS (Alta Performance)**: A escolha para escalabilidade extrema e aplicações Real-Time. Usa APIs assíncronas do sistema operacional (**IOCP** no Windows, **EPOLL** no Linux e **KQUEUE** no macOS) e oferece suporte nativo a **WebSockets** para comunicações bidirecionais. 
+   * *Atenção de Licenciamento:* O DCS é uma dependência de terceiros licenciada sob **LGPL**. Caso opte por usá-lo em produção, é necessário avaliar a compatibilidade com a forma de distribuição do seu projeto comercial.
+
+---
+
 ## 🔥 Pipeline Web Zero-Allocation: O Motor de Performance
 
 A pipeline HTTP do Dext foi integralmente refatorada para **eliminar alocações de heap** nos hot-paths de processamento de requisições. Isso não é uma otimização pontual — é uma filosofia arquitetural que perpassa toda a stack:
@@ -50,7 +61,7 @@ A pipeline HTTP do Dext foi integralmente refatorada para **eliminar alocações
 |---|---|---|
 | **Parsing de entrada** | `TByteSpan` + `TUtf8JsonReader` | Evita conversão UTF-8 → UTF-16 → UTF-8 |
 | **Desserialização** | `TUtf8JsonSerializer` | Cache de `TJsonRecordInfo` por `PTypeInfo` — elimina RTTI scan repetido |
-| **RTTI / Reflection** | `TReflection` (S07) | Lock-free fast path com cache singleton de metadata |
+| **RTTI / Reflection** | `TReflection` | Lock-free fast path com cache singleton de metadata |
 | **Value Conversion** | `TValueConverterRegistry` | Lookup 3 níveis sem alocação de TValue intermediário |
 | **Comparações** | `TDextSimd.EqualsBytes` | AVX2 (32 bytes/ciclo) ou SSE2 (16 bytes/ciclo) |
 | **Serialização de saída** | `TUtf8JsonWriter` | Streaming direto para output buffer — zero string temporária |
@@ -74,10 +85,7 @@ end;
 
 // Query com compilação estática e IntelliSense
 var Users := DbContext.Users
-  .Where(function(U: TUser): BooleanExpression
-  begin
-    Result := (U.Age > 18) and (U.Name.StartsWith('Ce'));
-  end)
+  .Where((U.Age > 18) and (U.Name.StartsWith('Ce')))
   .OrderBy(U.Age.Desc)
   .Take(50)
   .ToList;
@@ -96,15 +104,15 @@ var Users := DbContext.Users
 ### Profundidade do Type System
 
 ```
-Prop<T>  ────→  BooleanExpression  ────→  IExpression (AST)
-   │                  │                        │
-   ├─ Implicit(T)     ├─ and/or/not            ├─ TPropertyExpression
-   ├─ Implicit(Nullable<T>)                    ├─ TBinaryExpression
-   ├─ Implicit(Variant)                        ├─ TLogicalExpression
-   ├─ Like/StartsWith/Contains                 ├─ TFunctionExpression
-   ├─ In/NotIn/Between/IsNull                  ├─ TLiteralExpression
-   ├─ Asc/Desc → IOrderBy                     └─ TConstantExpression
-   └─ Aritmética: +, -, *, /
+Prop<T>  ───────────►  BooleanExpression  ────►  IExpression (AST)
+  │                           │                    │
+  ├─ Implicit(T)              └─ and/or/not        ├─ TPropertyExpression
+  ├─ Implicit(Nullable<T>)                         ├─ TBinaryExpression
+  ├─ Implicit(Variant)                             ├─ TLogicalExpression
+  ├─ Like/StartsWith/Contains                      ├─ TFunctionExpression
+  ├─ In/NotIn/Between/IsNull                       ├─ TLiteralExpression
+  ├─ Asc/Desc → IOrderBy                           └─ TConstantExpression
+  └─ Aritmética: +, -, *, /
 ```
 
 ---
@@ -117,40 +125,40 @@ O que diferencia o Dext de soluções isoladas é a **integração de ponta a po
 
 ```
                         ┌──────────────────┐
-                        │   Dext CLI        │
-                        │  (dext new/add)   │
+                        │   Dext CLI       │
+                        │  (dext new/add)  │
                         └────────┬─────────┘
                                  │ gera projetos usando
                                  ▼
-┌───────────────┐      ┌──────────────────┐      ┌───────────────┐
-│ Template Engine│◄─────│  Web Pipeline     │─────►│ View Engine   │
-│ (AST-based)   │      │  (Zero-Alloc)     │      │ (SSR/Stencils)│
-└───────────────┘      └────────┬─────────┘      └───────────────┘
+┌────────────────┐      ┌──────────────────┐      ┌────────────────┐
+│ Template Engine│◄─────│  Web Pipeline    │─────►│ View Engine    │
+│ (AST-based)    │      │  (Zero-Alloc)    │      │ (SSR/Stencils) │
+└────────────────┘      └────────┬─────────┘      └────────────────┘
                                  │
-                    ┌────────────┼────────────┐
-                    ▼            ▼            ▼
-            ┌────────────┐ ┌────────────┐ ┌────────────┐
-            │  DI Container│ │ JSON Engine │ │ Validation │
-            │  (Hybrid ARC)│ │ (UTF-8 0-alloc)│ │ (Attribute) │
-            └──────┬─────┘ └──────┬─────┘ └────────────┘
-                   │              │
-                   ▼              ▼
-            ┌────────────┐ ┌────────────┐
-            │  Reflection  │ │Smart Types │
-            │  (Cache S07) │ │ (Prop<T>)  │
-            └──────┬─────┘ └──────┬─────┘
-                   │              │ gera Expression Trees
-                   ▼              ▼
-            ┌────────────┐ ┌────────────┐
-            │   ORM        │◄│Specifications│
-            │ (Multi-DB)   │ │ (IExpression)│
-            └──────┬─────┘ └────────────┘
-                   │
-          ┌────────┼────────┐
-          ▼        ▼        ▼
-     ┌────────┐┌────────┐┌────────┐
-     │ PgSQL  ││ MSSQL  ││ MySQL  │ ... + Firebird, SQLite, Oracle
-     └────────┘└────────┘└────────┘
+                    ┌────────────┼──────────────┐
+                    ▼            ▼              ▼
+        ┌──────────────┐  ┌────────────────┐  ┌──────────────┐
+        │ DI Container │  │ JSON Engine    │  │ Validation   │
+        │ (Hybrid ARC) │  │ (UTF-8 0-alloc)│  │ (Attribute)  │
+        └──────┬───────┘  └──────┬─────────┘  └──────────────┘
+               │                 │
+               ▼                 ▼
+        ┌──────────────┐ ┌────────────┐
+        │  Reflection  │ │Smart Types │
+        │  (Cache)     │ │ (Prop<T>)  │
+        └──────┬───────┘ └──────┬─────┘
+               │                │ gera Expression Trees
+               ▼                ▼
+      ┌──────────────┐   ┌──────────────┐
+      │   ORM        │◄──│Specifications│
+      │ (Multi-DB)   │   │ (IExpression)│
+      └──────┬───────┘   └──────────────┘
+             │
+    ┌────────┼──────────┐
+    ▼        ▼          ▼
+┌────────┐  ┌────────┐  ┌────────┐
+│ PgSQL  │  │ MSSQL  │  │ MySQL  │ ... + Firebird, SQLite, Oracle
+└────────┘  └────────┘  └────────┘
 ```
 
 ### Integrações Chave que Não Existem em Soluções Isoladas
@@ -159,14 +167,27 @@ O que diferencia o Dext de soluções isoladas é a **integração de ponta a po
 |---|---|---|
 | **DI → ORM → Web** | DbContext é registrado como Scoped; cada request HTTP recebe sua instância; o EventBus compartilha o mesmo scope | Sem isso, transações e Identity Map quebram |
 | **Smart Types → ORM → SQL** | `Prop<T>` gera AST → ORM compila para o dialeto correto (PostgreSQL, MSSQL, etc.) | Query type-safe com IntelliSense, sem magic strings |
-| **Reflection → JSON → Web** | Cache RTTI S07 é compartilhado entre serialização JSON, model binding, ORM mapping e validation | Um único scan RTTI serve todo o framework |
-| **Templating → CLI → Web** | O mesmo motor de templates serve: scaffolding CLI, SSR web e geração de relatórios de teste | Uma engine, três usos — zero dependência cruzada |
+| **Reflection → JSON → Web** | Cache RTTI é compartilhado entre serialização JSON, model binding, ORM mapping e validation | Um único scan RTTI serve todo o framework |
+| **Templating → CLI → Web** | O mesmo motor de templates serve: scaffolding CLI, SSR web e geração de relatórios de testes unitários | Uma engine, três usos — zero dependência cruzada |
 | **EventBus → DI → Lifecycle** | Behaviors (Logging, Timing, Exception) são resolvidos via DI; lifecycle events conectam ao Host | Cross-cutting concerns sem acoplamento |
 | **Collections → SIMD → JSON** | `TByteSpan.Equals` usa `TDextSimd.EqualsBytes` (AVX2/SSE2) para comparações do parser JSON | Hardware acceleration transparente |
 | **Navigator → DI → Middleware** | Navigator usa a mesma arquitetura de middleware pipeline do Web para auth guards em navegação desktop | Desktop com padrões de segurança web |
 | **EntityDataSet → ORM → VCL** | `TEntityDataSet` lê offsets via `TEntityMap` do ORM; `LoadFromUtf8Json` usa `TByteSpan` zero-alloc | Bridge perfeita entre ORM moderno e grids legadas |
 | **REST Client → Async → DI** | `TRestClient` usa connection pool thread-safe; `TAsyncTask` encadeia operações; auth providers injetados via DI | HTTP client com mesma DX fluente do resto do framework |
 | **HTMX → View Engine → ORM** | Flyweight Iterators streamam queries do ORM direto para templates; HTMX auto-detection suprime layouts | Full-stack SSR com O(1) memória e zero JavaScript |
+
+---
+
+## 🖼️ TEntityDataSet: A Ponte Mágica entre ORM e Design-Time UI
+
+> *"E se uma empresa com um grande ERP de mercado quiser adotar o Dext? Como ela lidaria com centenas de forms lotados de componentes DB-aware (DBGrids, DevExpress cxGrid) e dezenas de relatórios FastReport desenhados visualmente na IDE?"*
+
+Foi exatamente essa pergunta que guiou a criação desta feature. Desenvolver APIs modernas com POCOs e Clean Architecture é excelente, mas o Delphi é insuperável na produtividade de construção visual de UIs. O `TEntityDataSet` foi construído para ser a ponte perfeita entre a nova arquitetura e o rico ecossistema de componentes visuais legados, **sem abrir mão de performance ou da experiência de desenvolvimento (DX)**.
+
+1. **Performance Absurda via Zero-Allocation**: Diferente de conversores tradicionais que usam RTTI em cada leitura, o `TEntityDataSet` se conecta nativamente a um `TList<T>` (ou `TObjectList<T>`). Ele extrai os *offsets* de memória durante a inicialização via `TEntityMap`. Durante o binding com a grid, ler um dado é virtualmente acessar um ponteiro de memória diretamente, sem reflexão.
+2. **Setup Automático (Parse de Entidades)**: Esqueça configurar colunas manualmente. Em *design-time*, o Dext faz o parse das suas units, localiza as entidades marcadas com atributos e **cria todos os `TFields` automaticamente** no DataSet.
+3. **Design-Time Data Preview Real**: Desenvolver relatórios (FastReport) "no escuro" é frustrante. O Dext resolve isso de forma brilhante: se você informar um `TFDConnection` e um `DataProvider`, o framework **gera um SQL dinâmico em tempo de design** e popula o `TEntityDataSet` com dados reais do banco. Você vê os dados na grid da IDE! 
+   * *Atenção:* Em *runtime*, esse SQL não é executado; o componente consome a sua lista de objetos real, respeitando a lógica da sua aplicação.
 
 ---
 
@@ -186,17 +207,25 @@ O Dext não apenas permite construir aplicações — ele garante que sejam **te
 
 **Tudo integrado com DI**: `TTestServiceProvider` substitui serviços de produção por mocks sem alterar o código da aplicação.
 
+### O Arsenal de Qualidade
+
+1. **Auto-Mocking Container (`TAutoMocker`)**: Chega de instanciar dezenas de mocks manualmente. O `TAutoMocker` resolve o grafo de dependências e injeta mocks em todas as interfaces exigidas pela classe sob teste.
+2. **Snapshot Testing (`MatchSnapshot`)**: Para testar estruturas complexas de JSON ou DTOs gigantes. O Dext serializa o resultado, compara com o snapshot aprovado e acusa qualquer regressão.
+3. **Code Coverage Integrado**: Execute `dext test --coverage` na CLI e o framework usa instrumentação própria para gerar relatórios detalhados de cobertura (linhas/branches) prontos para o SonarQube.
+4. **Integração CI/CD Nativa**: Suporte "out of the box" para gerar relatórios em formatos da indústria: JUnit XML, TRX, e HTML. Quality Gates reprovam a pipeline automaticamente se a cobertura cair.
+5. **Live Test Dashboard**: Execute `dext ui` e ganhe um dashboard local, moderno (dark-theme) rodando no navegador para visualizar a execução de toda a sua suíte de testes em tempo real.
+
 ---
 
 ## 🗄️ Database as API: Uma Linha de Código, Todo o Ecossistema Trabalhando
 
-O **Database as API** é a demonstração definitiva de como o ecossistema integrado do Dext cria valor impossível em soluções isoladas. Com **uma única linha de código**, o desenvolvedor ganha uma API REST completa com segurança, filtros, paginação, documentação e telemetria — tudo operando sobre a mesma pipeline zero-allocation.
+O **Database as API** é a demonstração definitiva de como o ecossistema integrado do Dext elimina o atrito arquitetural. É perfeitamente possível construir APIs similares costurando bibliotecas isoladas, mas o custo prático é brutal: montanhas de código *boilerplate*, gargalos de performance, mapeamentos exaustivos de DTOs, excesso de alocações na memória (garbage collection) e uma base de código frágil e difícil de manter. O Dext resolve isso na raiz: com **uma única linha de código**, o desenvolvedor ganha uma API REST completa com segurança, filtros, paginação, documentação e telemetria — tudo operando de forma coesa sobre uma pipeline *zero-allocation* com qualidade enterprise.
 
 ### O Que o Desenvolvedor Escreve
 
 ```pascal
-[DataApi]          // ← Isso é tudo.
-[Table('products')]
+[DataApi]  // ← Isso é tudo.
+[Table]
 TProduct = class
   [PK, AutoInc] property Id: Integer;
   property Name: string;
@@ -204,7 +233,7 @@ TProduct = class
 end;
 
 // No startup:
-App.MapDataApis;   // Escaneia RTTI, registra todas as [DataApi] automaticamente
+App.Builder.MapDataApis;  // Escaneia RTTI, registra todas as [DataApi] automaticamente
 ```
 
 ### O Que o Framework Entrega
@@ -226,7 +255,7 @@ Uma linha → 5 endpoints REST (GET list, GET by id, POST, PUT, DELETE)
 
 | Subsistema | O Que Faz no DataApi |
 |---|---|
-| **RTTI / Reflection (S07)** | `TDataApi.MapAll` escaneia atributos `[DataApi]` via `TReflection.Context.GetTypes`. `ResolvePropertyName` converte snake_case→PascalCase via `GetHandlerBySnakeCase` |
+| **RTTI / Reflection ** | `TDataApi.MapAll` escaneia atributos `[DataApi]` via `TReflection.Context.GetTypes`. `ResolvePropertyName` converte snake_case→PascalCase via `GetHandlerBySnakeCase` |
 | **DI Container** | `GetDbContext` resolve `TDbContext` do scope da request — cada request HTTP tem sua própria instância |
 | **ORM (TDbContext)** | `DataSet(ClassInfo)` retorna `IDbSet` dinâmico. `Add`, `Update`, `Remove`, `FindObject`, `ListObjects` |
 | **Specifications (AST)** | Filtros da QueryString geram `IExpression` via `TStringExpressionParser.Parse` — a **mesma AST** usada por `Prop<T>` |
@@ -262,40 +291,42 @@ App.Builder.MapDataApi<TProduct>('/api/products', DataApiOptions
 
 ---
 
-## 📊 O Que Não Existia no Delphi — O Que o Dext Trouxe
+## 📊 O Que o Dext Trouxe para o Delphi
 
-| Capacidade | Antes do Dext | Com o Dext |
-|---|---|---|
-| **DSL LINQ-like type-safe** | Inexistente | `Prop<T>` + Expression Trees + operator overloading |
-| **Pipeline HTTP zero-allocation** | N/A | `TByteSpan` → `TUtf8JsonReader` → handler → `TUtf8JsonWriter` → socket |
-| **Frozen Collections (.NET 8 style)** | Inexistente | `TFrozenDictionary<K,V>`, `TFrozenSet<T>` |
-| **Go-style Channels** | Inexistente | `TChannel<T>` com bounded/unbounded e back-pressure |
-| **SIMD-accelerated collections** | Inexistente | AVX2 (32B/ciclo), SSE2 (16B/ciclo) com fallback |
-| **Lock Striping (concurrent dict)** | Inexistente | `TConcurrentDictionary<K,V>` com array de `TSpinLock` |
-| **Minimal API style routing** | Inexistente | `App.MapGet`, `App.MapPost` com auto-binding |
-| **Auto-Mocking Container** | Inexistente | `TAutoMocker` injeta mocks automaticamente |
-| **Snapshot Testing** | Inexistente | `MatchSnapshot` com baselines JSON |
-| **Database as API (zero-code)** | Inexistente | `[DataApi]` + `MapDataApis` → CRUD REST com 11 filtros, segurança, Swagger, telemetria, multi-tenant — **10 subsistemas ativados com 1 linha** |
-| **Expression Evaluator (dual-mode AST)** | Inexistente | Mesma `IExpression` AST gera SQL no banco E avalia in-memory no servidor |
-| **Soft Delete declarativo** | Inexistente | `[SoftDelete]` → Remove vira UPDATE, `Restore`, `OnlyDeleted`, `IgnoreQueryFilters` |
-| **JSON/JSONB Column Queries** | Inexistente | `.Json('path')` cross-database: PG `#>>`, MySQL `JSON_EXTRACT`, SQLite `json_extract`, MSSQL `JSON_VALUE` |
-| **Flutter-style Navigator (Desktop)** | Inexistente | Push/Pop/PopUntil + 3 Adapters + Middleware Pipeline + Auth Guard |
-| **Magic Binding (Desktop MVVM)** | Inexistente | `[BindEdit]`, `[BindText]`, `[OnClickMsg]` — two-way binding por atributos |
-| **EntityDataSet zero-allocation** | Inexistente | Leitura via offsets `TEntityMap` + `LoadFromUtf8Json` + design-time Sync Fields |
-| **Flyweight SSR Iterators** | Inexistente | 10K registros renderizados com O(1) memória — sem `ToList` |
-| **HTMX Auto-Detection** | Inexistente | Pipeline suprime layout automaticamente para `HX-Request` headers |
-| **REST Client com Connection Pool** | Inexistente | Record leve + async chaining (`ThenBy<T>`) + pluggable auth + cancellation |
-| **TAsyncTask fluente** | Inexistente | `Run<T>.ThenBy<U>.OnComplete.OnException.Start` com cancellation |
-| **IOptions<T> tipado** | Inexistente | Binding de seções JSON/YAML/ENV para classes tipadas — idêntico ao ASP.NET Core |
-| **AI Skills nativas** | Inexistente | Skills modulares para Cursor/Antigravity/Copilot gerarem código idiomático Dext |
-| **Multi-tenancy (Schema/DB/Column)** | Inexistente | 3 estratégias integradas com ORM |
-| **SignalR-compatible Hubs** | Inexistente | `Dext.Web.Hubs` com grupos e broadcast |
-| **AST Template Engine** | Inexistente | Parser → AST → Executor com layouts e herança |
-| **DI Híbrido (ARC + Manual)** | Inexistente | Interface → ARC, Classe → Manual lifecycle |
-| **Defer Pattern (Go-style)** | Inexistente | `IDeferred` / `TDeferredAction` |
-| **ILifetime<T> (ARC wrapper)** | Inexistente | Wrap de objetos Non-ARC em ARC |
-| **Code Coverage via CLI** | Inexistente | `dext test --coverage` com SonarQube |
-| **Live Test Dashboard** | Inexistente | Dashboard web dark-theme em tempo real |
+| Capacidade | Como o Dext Resolve |
+|---|---|
+| **DSL LINQ-like type-safe** | `Prop<T>` + Expression Trees + operator overloading |
+| **Type Definition Separation** | `TEntityType<T>` separa dados (POCO) de metadados (Smart Props) para uso em sistemas legados |
+| **Pipeline HTTP zero-allocation** | `TByteSpan` → `TUtf8JsonReader` → handler → `TUtf8JsonWriter` → socket |
+| **Frozen Collections (.NET 8 style)** | `TFrozenDictionary<K,V>`, `TFrozenSet<T>` |
+| **Go-style Channels** | `TChannel<T>` com bounded/unbounded e back-pressure |
+| **SIMD-accelerated collections** | AVX2 (32B/ciclo), SSE2 (16B/ciclo) com fallback |
+| **Lock Striping (concurrent dict)** | `TConcurrentDictionary<K,V>` com array de `TSpinLock` |
+| **Minimal API style routing** | `App.MapGet`, `App.MapPost` com auto-binding |
+| **Auto-Mocking Container** | `TAutoMocker` injeta mocks automaticamente |
+| **Snapshot Testing** | `MatchSnapshot` com baselines JSON |
+| **Database as API (zero-code)** | `[DataApi]` + `MapDataApis` → CRUD REST com 11 filtros, segurança, Swagger, telemetria, multi-tenant — **10 subsistemas ativados com 1 linha** |
+| **Expression Evaluator (dual-mode AST)** | Mesma `IExpression` AST gera SQL no banco E avalia in-memory no servidor |
+| **Soft Delete declarativo** | `[SoftDelete]` → Remove vira UPDATE, `Restore`, `OnlyDeleted`, `IgnoreQueryFilters` |
+| **JSON/JSONB Column Queries** | `.Json('path')` cross-database: PG `#>>`, MySQL `JSON_EXTRACT`, SQLite `json_extract`, MSSQL `JSON_VALUE` |
+| **Flutter-style Navigator (Desktop)** | Push/Pop/PopUntil + 3 Adapters + Middleware Pipeline + Auth Guard |
+| **Magic Binding (Desktop MVVM)** | `[BindEdit]`, `[BindText]`, `[OnClickMsg]` — two-way binding por atributos |
+| **EntityDataSet zero-allocation** | Leitura via offsets `TEntityMap` + `LoadFromUtf8Json` + design-time Sync Fields |
+| **Flyweight SSR Iterators** | 10K registros renderizados com O(1) memória — sem `ToList` |
+| **HTMX Auto-Detection** | Pipeline suprime layout automaticamente para `HX-Request` headers |
+| **REST Client com Connection Pool** | Record leve + async chaining (`ThenBy<T>`) + pluggable auth + cancellation |
+| **TAsyncTask fluente** | `Run<T>.ThenBy<U>.OnComplete.OnException.Start` com cancellation |
+| **IOptions<T> tipado** | Binding de seções JSON/YAML/ENV para classes tipadas — idêntico ao ASP.NET Core |
+| **AI Skills nativas** | Skills modulares para Cursor/Antigravity/Copilot gerarem código idiomático Dext |
+| **Multi-tenancy (Schema/DB/Column)** | 3 estratégias integradas com ORM |
+| **SignalR-compatible Hubs** | `Dext.Web.Hubs` com grupos e broadcast |
+| **AST Template Engine** | Parser → AST → Executor com layouts e herança |
+| **DI Híbrido (ARC + Manual)** | Interface → ARC, Classe → Manual lifecycle |
+| **Defer Pattern (Go-style)** | `IDeferred` / `TDeferredAction` |
+| **ILifetime<T> (ARC wrapper)** | Wrap de objetos Non-ARC em ARC |
+| **Code Coverage via CLI** | `dext test --coverage` com SonarQube |
+| **Live Test Dashboard** | Dashboard web dark-theme em tempo real |
+| **Precise Stack Trace Extraction** | Extração de stack frames com origem e linha (`Dext.Core.Debug`) para rastrear erros no pipeline integrado |
 
 ---
 
@@ -308,7 +339,7 @@ App.Builder.MapDataApi<TProduct>('/api/products', DataApiOptions
 - **S13 — Redis Client**: Client async de alta performance com RESP3 e RedisJSON
 
 ### Futuro
-- HTTP Server nativo (IOCP/EPOLL/Kqueue — sem dependência de Indy)
+- HTTP Server nativo (IOCP/EPOLL/Kqueue — sem dependência de DCS)
 - OData, GraphQL
 - Microservices Mesh (service discovery + load balancing)
 - UI Nativo com Skia
@@ -326,7 +357,7 @@ Em vez de forçar uma única estratégia (ARC ou manual), o DI Container detecta
 ### 3. Driver Pattern Para Extensibilidade
 JSON, HTTP Server, e Database usam o mesmo padrão: uma abstração de interface com múltiplos drivers plugáveis. Isso permite trocar `JsonDataObjects` por `System.JSON`, ou `Indy` por `DCS` ou `WebBroker`, sem alterar código de aplicação.
 
-### 4. Reflection Cache (S07) Como Backbone
+### 4. Reflection Cache Como Backbone
 O cache RTTI thread-safe com fast paths lock-free é **o backbone** de todo o framework. JSON, ORM, Validation, Model Binding, Smart Types — todos consultam o mesmo cache singleton. Um único scan RTTI na inicialização serve **toda a vida útil** do processo.
 
 ### 5. Infrastructure Flywheel — Velocidade Exponencial de Features
@@ -340,7 +371,7 @@ Engine Original                  →  Reuso Emergente
 ─────────────────────────────────────────────────────
 Specification (ORM queries)      →  DataApi (URL filtering — grátis)
                                  →  In-Memory Evaluator (zero código extra)
-Reflection Cache S07 (JSON)      →  ORM + Validation + Model Binding + EntityDataSet
+Reflection Cache (JSON)          →  ORM + Validation + Model Binding + EntityDataSet
 TByteSpan (zero-allocation)      →  JSON Reader + EntityDataSet + Redis RESP3 (~80% pronto)
 TConnectionPool (REST Client)    →  Redis Client (mesmo padrão)
 TAsyncTask (async/await)         →  REST Client + Redis + Background Services
@@ -349,7 +380,7 @@ TAsyncTask (async/await)         →  REST Client + Redis + Background Services
 **Resultado prático**: Na análise de viabilidade do Redis Client, ~80% da infraestrutura já existia — `TByteSpan`, `TAsyncTask`, `TConnectionPool`, `ICancellationToken`. O único código genuinamente novo é o protocolo RESP3.
 
 ### 6. O Trade-Off da Integração
-A profundidade da integração traz um **multiplicador de responsabilidade**: uma alteração no `IExpression` deve ser validada contra **todos os consumidores** — ORM, DataApi, Evaluator, EntityDataSet. Isso torna os testes automatizados não opcionais, mas **existenciais**. Os 165+ testes em 5 bancos de dados são o preço — e a garantia — da integração.
+A profundidade da integração traz um **multiplicador de responsabilidade**: uma alteração no `IExpression` deve ser validada contra **todos os consumidores** — ORM, DataApi, Evaluator, EntityDataSet. Isso torna os testes automatizados não opcionais, mas **existenciais**. Os testes em pelo menos 5 bancos de dados são o preço — e a garantia — da integração.
 
 ---
 

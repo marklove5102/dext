@@ -148,9 +148,14 @@ end;
 
 1. `Prop<T>` operates in **dual mode**: runtime (stores values) or query (generates AST)
 2. When `.Where(...)` executes, a **prototype** instance is created with metadata injected
-3. `U.Age > 18` triggers `Prop<Integer>.GreaterThan` operator → generates `TBinaryExpression`
-4. `and` combines into `TLogicalExpression`
-5. The SQL Dialect Compiler walks the AST → generates correct SQL for each database
+3. The comparison `U.Age > 18` is intercepted by operator overloading, returning an `IExpression` node, not a boolean.
+
+### What if I have legacy POCOs? (Type Definition Separation)
+**Talking point**: *"But what if you are migrating a legacy system and your entities are pure POCOs, and you don't want to change them to use `Prop<T>`? Dext provides `TEntityType<T>`. It allows you to separate the data from the metadata. You define the metadata externally, and you still get the exact same LINQ-like AST generation. It respects your existing architecture."*
+
+4. `Prop<T>` generates `TBinaryExpression`
+5. `and` combines into `TLogicalExpression`
+6. The SQL Dialect Compiler walks the AST → generates correct SQL for each database
 
 **Demo suggestion**: Show IntelliSense working on entity properties, then show the generated SQL.
 
@@ -243,11 +248,11 @@ Request → TByteSpan (stack-allocated)
 
 ---
 
-## 🏆 Feature 4: Integrated Testing Ecosystem (3 min)
+## 🏆 Feature 4: Integrated Testing & Observability (3 min)
 
-**What it is**: A complete testing toolkit designed to work with the DI container and ORM.
+**What it is**: A complete testing toolkit and observability layer designed to work seamlessly with the DI container, middleware pipeline, and ORM.
 
-**Why it's unique**: `TAutoMocker<T>` and `MatchSnapshot` don't exist in any other Delphi testing framework.
+**Why it's unique**: `TAutoMocker<T>`, `MatchSnapshot`, and precise pipeline Stack Trace extraction don't exist in any other Delphi framework.
 
 ### Auto-Mocking Container
 ```pascal
@@ -276,6 +281,9 @@ Code → Unit Tests + Mocking → Auto-Mocking (TAutoMocker)
      → Live Dashboard (dext ui)
 ```
 
+### Precise Stack Trace Extraction
+**Talking point**: *"When you have a highly integrated framework—where a request hits an HTTP pipeline, triggers a DI interceptor, publishes to an Event Bus, and finally hits the ORM—debugging can be a nightmare. Dext includes a native **Stack Trace Extraction** engine (`Dext.Core.Debug`). It captures the exact origin line of an exception across the entire asynchronous pipeline, saving hours of debugging."*
+
 ---
 
 ## 🏆 Feature 5: Collections (3 min)
@@ -301,6 +309,7 @@ Quick-fire round of patterns that don't exist in other Delphi frameworks:
 
 | Pattern | What It Does |
 |---|---|
+| **Web Server Agnostic** | Write once, deploy to Indy (Built-in), WebBroker (ISAPI/Apache/NGINX), or DCS (IOCP/EPOLL High-Perf) |
 | **Minimal API** (`App.MapGet`) | .NET-style route registration without controllers |
 | **Hybrid DI** (ARC + Manual) | Interfaces use ARC, classes use managed lifecycle |
 | **IOptions<T>** | Typed configuration binding from JSON/YAML/ENV — identical to ASP.NET Core |
@@ -344,14 +353,19 @@ Navigator.PopUntil(THomeView);
 
 **Magic Binding**: Two-way binding via attributes, nested properties (`Customer.Address.City`), custom converters (`IValueConverter`), message dispatch (`[OnClickMsg]`).
 
-### EntityDataSet: Bridge ORM ↔ VCL
+### EntityDataSet: The Magic Bridge (ORM ↔ VCL/FMX)
 
 ```pascal
-DataSet.Load(Context.Users.ToList, TUser);  // Smart binding to TDBGrid
+DataSet.Load(Context.Users.ToList);          // Binds POCO list to TDBGrid
 DataSet.LoadFromUtf8Json(Span, TUser);       // Zero-allocation from JSON buffer
 ```
 
-**Design-time integration**: Right-click → Sync Fields / Refresh Entity. The IDE reads your entity source code and creates `TField` definitions — **without compiling the project**.
+**Talking point**: *"Developers love clean architecture with POCOs, but they miss the productivity of dragging a DataSet to a Grid or a FastReport. The `TEntityDataSet` bridges this gap beautifully, without reflection penalties during rendering, thanks to memory offset caching."*
+
+**The "Wow" Design-Time Features**:
+1. **Auto Field Generation**: Right-click → Sync Fields. The IDE parses your `.pas` files, finds the Entity, and creates `TField` components automatically.
+2. **Live Data Preview**: If you link a `TFDConnection` and a `DataProvider` at design-time, Dext generates dynamic SQL, runs it, and populates the grid **inside the Delphi IDE**. 
+   * *The kicker:* At runtime, this SQL is ignored! The DataSet binds to your actual `TList<T>`, keeping your clean architecture intact while giving you RAD productivity for UI and Reports.
 
 ### REST Client with Connection Pooling
 

@@ -63,6 +63,7 @@
 - **Lazy\<T\>** (`Dext.Types.Lazy`) — Inicialização lazy thread-safe via `TCriticalSection` (double-checked locking). `ILazy` e `ILazy<T>` interfaces. `TLazy<T>` (factory-based) e `TValueLazy<T>` (pre-computed). Operadores implícitos: `T→Lazy<T>`, `Lazy<T>→T`, `TFunc<T>→Lazy<T>`. Ownership management: `AOwnsValue` parameter controla se o valor é destruído com o lazy.
 
 ### 1.6b Smart Types & Expression Trees (`Dext.Core.SmartTypes`, `Dext.Specifications.*`)
+- **TEntityType\<T\>** (`Dext.Entity.TypeSystem`) — Classes de definição separadas para queries. Permite separar dados de metadados trabalhando com POCOs puros, gerando as mesmas árvores de expressão sem precisar embutir `Prop<T>` na própria entidade. Ideal para sistemas legados ou quando a separação estrita é preferida.
 - **Prop\<T\>** (`Dext.Core.SmartTypes`) — Record genérico que opera em **modo dual**: (1) **Runtime Mode** — armazena valor `T` normalmente, (2) **Query Mode** — gera árvores de expressão (`IExpression` / AST) automaticamente via operator overloading. É o pilar central da **DSL fluente LINQ-like** do Dext.
 - **BooleanExpression** — Record híbrido que pode conter um `Boolean` literal OU um nó `IExpression` (AST). Operadores `and`, `or`, `not`, `xor` geram nós `TLogicalExpression` automaticamente em query mode.
 - **Type Aliases** — `StringType`, `IntType`, `Int64Type`, `BoolType`, `FloatType`, `CurrencyType`, `DateTimeType`, `DateType`, `TimeType` — aliases semânticos para `Prop<T>` que tornam as entidades autodocumentadas.
@@ -295,13 +296,14 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 - **INSERT com Cast** — `::jsonb` automático no PostgreSQL para `[JsonColumn(True)]`.
 
 ### 4.9 EntityDataSet (`Dext.Data.EntityDataSet`)
-- Componente VCL/FMX com **Design-Time Data Preview**, Sorting e Filtering inline.
-- **Zero-Allocation** — Leitura via offsets de memória via `TEntityMap`, sem replicação de objetos.
-- **`LoadFromUtf8Json`** — Carregamento direto de `TByteSpan` JSON sem conversão de encoding.
-- **Filtros por Expressão** — `DataSet.Filter := 'Score > 100'` com avaliação in-memory.
-- **Design-Time Verbs** — "Sync Fields" (incremental, preserva customizações) e "Refresh Entity" (hard reset).
-- **Auto-Stabilization** — `Active` nunca é salvo como `True` no DFM; trocar `EntityClassName` reconstrói campos automaticamente.
-- **DML Memory Mode** — Append, Edit, Delete operacionais em memória.
+- **Ponte ORM ↔ VCL/FMX** — Conecta componentes legados (DBGrid, FastReport) a coleções `TList<T>` de POCOs preservando a arquitetura limpa.
+- **Zero-Allocation Memory** — Acesso via offsets de memória mapeados pelo `TEntityMap` elimina a necessidade de RTTI ou cópias de string a cada leitura de registro.
+- **`LoadFromUtf8Json`** — Carregamento direto de streams/buffers JSON via `TByteSpan` sem conversão prévia de encoding.
+- **Setup Automático (Parse AST)** — Em design-time, as *Verbs* "Sync Fields" e "Refresh Entity" fazem o parse direto das units `.pas` e criam os `TFields` dinamicamente **sem precisar compilar o projeto**.
+- **Live Data Preview (Híbrido)** — A maior mágica da IDE: informando um `TFDConnection` e um `DataProvider`, o Dext **gera SQL dinâmico** e exibe dados reais na Grid durante o desenvolvimento. Em *runtime*, esse SQL é completamente ignorado e o componente consome apenas as coleções injetadas.
+- **Filtros por Expressão** — `DataSet.Filter := 'Score > 100'` suportado usando o mesmo `TExpressionEvaluator` do framework in-memory.
+- **Auto-Stabilization** — A propriedade `Active` nunca é serializada como `True` no DFM; evita erros de instâncias ausentes em runtime.
+- **DML Memory Mode** — Operações de `Append`, `Edit`, `Post` e `Delete` operam nativamente na lista subjacente na memória.
 
 ### 4.10 Inheritance Mapping
 - **TPH (Table-Per-Hierarchy)** — Hidratação polimórfica automática baseada em discriminadores via atributos.
@@ -497,6 +499,7 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 - **Telemetry Bridge** (`Dext.Logging.Telemetry`) — Integração automática com `ILogger`, permitindo visualizar telemetria HTTP e SQL no console ou arquivos de log.
 - **SQL Capture** — Extração e formatação de instruções SQL nativas do ORM para auditoria em tempo real.
 - **HTTP Life-cycle** — Tracing de latência, códigos de status e rotas do framework web.
+- **Stack Trace Extraction** (`Dext.Core.Debug`) — Extração precisa e detalhada do stack trace no momento da exception. Fundamental para debugar um framework altamente integrado onde o fluxo de execução é dinâmico e o mesmo erro pode ter origens completamente diferentes dependendo do contexto.
 
 ---
 
